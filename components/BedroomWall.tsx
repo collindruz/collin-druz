@@ -543,6 +543,19 @@ export function BedroomWall({ projects }: Props) {
     () => layoutsForProjects(projects),
     [projects],
   );
+  const projectsByYearDesc = useMemo(() => {
+    return projects
+      .map((project, idx) => ({ project, idx }))
+      .sort((a, b) => {
+        const ay = parseInt(a.project.year, 10);
+        const by = parseInt(b.project.year, 10);
+        const aYear = Number.isFinite(ay) ? ay : -Infinity;
+        const bYear = Number.isFinite(by) ? by : -Infinity;
+        if (bYear !== aYear) return bYear - aYear;
+        return a.idx - b.idx;
+      })
+      .map(({ project }) => project);
+  }, [projects]);
 
   useEffect(() => {
     const links: HTMLLinkElement[] = [];
@@ -647,11 +660,11 @@ export function BedroomWall({ projects }: Props) {
       </p>
 
       <aside
-        className="bedroom-project-rail pointer-events-auto absolute right-[2.2%] top-[2.5%] z-[35]"
+        className="bedroom-project-rail pointer-events-auto absolute right-[2.2%] top-[2.5%] z-[110]"
         aria-label="Project index"
       >
         <div ref={stripRef} className="bedroom-project-rail__scroll">
-          {projects.map((project) => (
+          {projectsByYearDesc.map((project) => (
             <button
               key={project.slug}
               type="button"

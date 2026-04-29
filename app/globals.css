@@ -420,6 +420,9 @@
   font-size: 8px;
   letter-spacing: 0.052em;
   line-height: 1.1;
+  text-shadow:
+    0 0 8px rgba(232, 234, 230, 0.6),
+    0 0 2px rgba(232, 234, 230, 0.45);
 }
 
 .bedroom-project-rail__item:hover,
