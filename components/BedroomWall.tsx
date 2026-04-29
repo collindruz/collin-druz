@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   BedroomPoster,
   type PosterWallLayout,
@@ -533,6 +540,35 @@ function posterPreloadUrl(p: Project): string | null {
   return th.src ?? null;
 }
 
+const PosterWallCell = memo(function PosterWallCell({
+  project,
+  wallLayout,
+  open,
+  railHoverActive,
+  onTogglePoster,
+}: {
+  project: Project;
+  wallLayout: PosterWallLayout;
+  open: boolean;
+  railHoverActive: boolean;
+  onTogglePoster: (slug: string) => void;
+}) {
+  const onToggle = useCallback(() => {
+    onTogglePoster(project.slug);
+  }, [project.slug, onTogglePoster]);
+
+  return (
+    <BedroomPoster
+      project={project}
+      wallLayout={wallLayout}
+      open={open}
+      railHoverActive={railHoverActive}
+      onToggle={onToggle}
+    />
+  );
+});
+PosterWallCell.displayName = "PosterWallCell";
+
 export function BedroomWall({ projects }: Props) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
   const [hoverSlug, setHoverSlug] = useState<string | null>(null);
@@ -545,6 +581,7 @@ export function BedroomWall({ projects }: Props) {
   const [cursorOverImage, setCursorOverImage] = useState(false);
   const mailHref = `mailto:${CONTACT_EMAIL}`;
   const stripRef = useRef<HTMLDivElement>(null);
+  const mobileSheetOpenRef = useRef(false);
   const wallLayouts = useMemo(
     () => layoutsForProjects(projects),
     [projects],
@@ -583,12 +620,31 @@ export function BedroomWall({ projects }: Props) {
   }, [projects]);
 
   useEffect(() => {
+    mobileSheetOpenRef.current = mobileSheetOpen;
+  }, [mobileSheetOpen]);
+
+  const onTogglePoster = useCallback((slug: string) => {
+    setOpenSlug((cur) => (cur === slug ? null : slug));
+  }, []);
+
+  const pickFromSheet = useCallback((slug: string) => {
+    setOpenSlug((cur) => (cur === slug ? null : slug));
+    setMobileSheetOpen(false);
+  }, []);
+
+  useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
       if (
         t.closest("[data-project-sheet]") ||
         t.closest("[data-mobile-index-trigger]")
+      ) {
+        return;
+      }
+      if (
+        mobileSheetOpenRef.current &&
+        t.closest(".bedroom-mobile-sheet")
       ) {
         return;
       }
@@ -602,11 +658,18 @@ export function BedroomWall({ projects }: Props) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const media = window.matchMedia("(pointer: coarse)");
-    const apply = () => setCoarsePointer(media.matches);
-    apply();
-    media.addEventListener?.("change", apply);
-    return () => media.removeEventListener?.("change", apply);
+    const coarseMq = window.matchMedia("(pointer: coarse)");
+    const fineMq = window.matchMedia("(pointer: fine)");
+    const applyCoarse = () => setCoarsePointer(coarseMq.matches);
+    const applyFine = () => setCursorEnabled(fineMq.matches);
+    applyCoarse();
+    applyFine();
+    coarseMq.addEventListener?.("change", applyCoarse);
+    fineMq.addEventListener?.("change", applyFine);
+    return () => {
+      coarseMq.removeEventListener?.("change", applyCoarse);
+      fineMq.removeEventListener?.("change", applyFine);
+    };
   }, []);
 
   useEffect(() => {
@@ -619,13 +682,13 @@ export function BedroomWall({ projects }: Props) {
   }, [mobileSheetOpen]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const media = window.matchMedia("(pointer: fine)");
-    const apply = () => setCursorEnabled(media.matches);
-    apply();
-    media.addEventListener?.("change", apply);
-    return () => media.removeEventListener?.("change", apply);
-  }, []);
+    if (!mobileSheetOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileSheetOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileSheetOpen]);
 
   useEffect(() => {
     if (!cursorEnabled) return;
@@ -669,6 +732,9 @@ export function BedroomWall({ projects }: Props) {
 
   useEffect(() => {
     if (!openSlug) return;
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 820px)").matches) {
+      return;
+    }
     const strip = stripRef.current;
     if (!strip) return;
     const active = strip.querySelector<HTMLElement>(`[data-video-slug="${openSlug}"]`);
@@ -717,9 +783,7 @@ export function BedroomWall({ projects }: Props) {
               type="button"
               data-video-slug={project.slug}
               className={`bedroom-project-rail__item ${openSlug === project.slug ? "is-active" : ""}`}
-              onClick={() =>
-                setOpenSlug((cur) => (cur === project.slug ? null : project.slug))
-              }
+              onClick={() => onTogglePoster(project.slug)}
               onMouseEnter={() => setHoverSlug(project.slug)}
               onMouseLeave={() => setHoverSlug((cur) => (cur === project.slug ? null : cur))}
               onFocus={() => setHoverSlug(project.slug)}
@@ -768,10 +832,7 @@ export function BedroomWall({ projects }: Props) {
                 type="button"
                 data-video-slug={project.slug}
                 className={`bedroom-mobile-sheet__item ${openSlug === project.slug ? "is-active" : ""}`}
-                onClick={() => {
-                  setOpenSlug((cur) => (cur === project.slug ? null : project.slug));
-                  setMobileSheetOpen(false);
-                }}
+                onClick={() => pickFromSheet(project.slug)}
               >
                 <span className="bedroom-mobile-sheet__year">{project.year}</span>
                 <span className="bedroom-mobile-sheet__title">{project.title}</span>
@@ -782,15 +843,13 @@ export function BedroomWall({ projects }: Props) {
       </div>
 
       {projects.map((project, i) => (
-        <BedroomPoster
+        <PosterWallCell
           key={project.slug}
           project={project}
           wallLayout={wallLayouts[i]!}
           open={openSlug === project.slug}
           railHoverActive={railHoverBoost && hoverSlug === project.slug}
-          onToggle={() => {
-            setOpenSlug((cur) => (cur === project.slug ? null : project.slug));
-          }}
+          onTogglePoster={onTogglePoster}
         />
       ))}
 

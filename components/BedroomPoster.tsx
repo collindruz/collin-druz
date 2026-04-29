@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -128,7 +129,7 @@ function formatClock(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function BedroomPoster({
+function BedroomPosterInner({
   project,
   wallLayout,
   open,
@@ -428,21 +429,6 @@ export function BedroomPoster({
   }, [ytReady, open]);
 
   useEffect(() => {
-    const pl = ytPlayerRef.current;
-    if (!pl || !ytReady || !open) return;
-    const id = window.setInterval(() => {
-      try {
-        setYtSoundBlocked(
-          typeof pl.isMuted === "function" ? pl.isMuted() : false,
-        );
-      } catch {
-        setYtSoundBlocked(false);
-      }
-    }, 400);
-    return () => clearInterval(id);
-  }, [ytReady, open]);
-
-  useEffect(() => {
     if (!open || !ytReady) return;
     const id = requestAnimationFrame(() => setResizeTick((n) => n + 1));
     return () => cancelAnimationFrame(id);
@@ -489,11 +475,15 @@ export function BedroomPoster({
         try {
           const current = pl.getCurrentTime?.() ?? 0;
           const dur = pl.getDuration?.() ?? 0;
-          if (isScrubbing) return;
-          setPlaybackTime(current);
-          setPlaybackDuration(dur);
+          if (!isScrubbing) {
+            setPlaybackTime(current);
+            setPlaybackDuration(dur);
+          }
+          setYtSoundBlocked(
+            typeof pl.isMuted === "function" ? pl.isMuted() : false,
+          );
         } catch {
-          /* ignore */
+          setYtSoundBlocked(false);
         }
       }, 250);
       return () => clearInterval(id);
@@ -521,6 +511,17 @@ export function BedroomPoster({
     },
     [embed.kind, ytReady],
   );
+
+  useEffect(() => {
+    if (!isScrubbing) return;
+    const end = () => setIsScrubbing(false);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    return () => {
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+  }, [isScrubbing]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -914,3 +915,6 @@ export function BedroomPoster({
     </div>
   );
 }
+
+export const BedroomPoster = memo(BedroomPosterInner);
+BedroomPoster.displayName = "BedroomPoster";
