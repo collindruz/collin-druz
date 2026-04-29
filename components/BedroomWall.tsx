@@ -537,6 +537,7 @@ export function BedroomWall({ projects }: Props) {
   const [cursorVisible, setCursorVisible] = useState(false);
   const [cursorActive, setCursorActive] = useState(false);
   const [cursorEnabled, setCursorEnabled] = useState(false);
+  const [cursorOverImage, setCursorOverImage] = useState(false);
   const mailHref = `mailto:${CONTACT_EMAIL}`;
   const stripRef = useRef<HTMLDivElement>(null);
   const wallLayouts = useMemo(
@@ -609,6 +610,12 @@ export function BedroomWall({ projects }: Props) {
       if (e.pointerType !== "mouse") return;
       setCursorPos({ x: e.clientX, y: e.clientY });
       setCursorVisible(true);
+      const target = e.target;
+      if (target instanceof Element) {
+        setCursorOverImage(Boolean(target.closest("[data-wall-poster]")));
+      } else {
+        setCursorOverImage(false);
+      }
     };
     const onDown = (e: PointerEvent) => {
       if (e.pointerType === "mouse") setCursorActive(true);
@@ -696,7 +703,7 @@ export function BedroomWall({ projects }: Props) {
 
       {cursorEnabled ? (
         <div
-          className={`bedroom-analog-cursor ${cursorVisible ? "is-visible" : ""} ${cursorActive ? "is-active" : ""}`}
+          className={`bedroom-analog-cursor ${cursorVisible ? "is-visible" : ""} ${cursorActive ? "is-active" : ""} ${cursorOverImage ? "is-over-image" : ""}`}
           style={{ transform: `translate3d(${cursorPos.x}px, ${cursorPos.y}px, 0)` }}
           aria-hidden
         >
