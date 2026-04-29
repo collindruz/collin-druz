@@ -647,23 +647,23 @@ export function BedroomWall({ projects }: Props) {
       </p>
 
       <aside
-        className="bedroom-video-strip pointer-events-auto absolute bottom-[3.2%] right-[3.2%] z-[35]"
+        className="bedroom-video-rail pointer-events-auto absolute right-[1.2%] top-[8%] z-[36] h-[82vh]"
         aria-label="Video index"
       >
-        <div ref={stripRef} className="bedroom-video-strip__scroll">
+        <div ref={stripRef} className="bedroom-video-rail__scroll">
           {projects.map((project) => (
             <button
               key={project.slug}
               type="button"
               data-video-slug={project.slug}
-              className={`bedroom-video-strip__item ${openSlug === project.slug ? "is-active" : ""}`}
+              className={`bedroom-video-rail__item ${openSlug === project.slug ? "is-active" : ""}`}
               onClick={() =>
                 setOpenSlug((cur) => (cur === project.slug ? null : project.slug))
               }
               title={project.title}
+              aria-label={project.title}
             >
-              <span className="bedroom-video-strip__year">{project.year}</span>
-              <span className="bedroom-video-strip__title">{project.title}</span>
+              <span className="bedroom-video-rail__bead" />
             </button>
           ))}
         </div>
@@ -687,8 +687,9 @@ export function BedroomWall({ projects }: Props) {
           style={{ transform: `translate3d(${cursorPos.x}px, ${cursorPos.y}px, 0)` }}
           aria-hidden
         >
-          <span className="bedroom-analog-cursor__ring" />
-          <span className="bedroom-analog-cursor__dot" />
+          <span className="bedroom-crosshair-cursor__v" />
+          <span className="bedroom-crosshair-cursor__h" />
+          <span className="bedroom-crosshair-cursor__center" />
         </div>
       ) : null}
     </div>
