@@ -65,6 +65,8 @@ const HALF_WIDTH_VW: Record<ProjectSize, number> = {
 
 /** Minimum space from viewport edge to poster’s outer extent (readable inset). */
 const WALL_H_INSET_PCT = 5;
+/** Reserved gutter for right-side project labels (desktop-first safety margin). */
+const WALL_RIGHT_LABEL_GUTTER_PCT = 24;
 
 /** Additional horizontal radius (~hand jitter vs narrow viewports). */
 const WALL_HAND_SLACK_PCT = 2.6;
@@ -77,7 +79,7 @@ function effectiveHalfWidthPct(size: ProjectSize): number {
 function clampWallLeftPct(leftPct: number, size: ProjectSize): number {
   const hw = effectiveHalfWidthPct(size);
   const minC = WALL_H_INSET_PCT + hw;
-  const maxC = 100 - WALL_H_INSET_PCT - hw;
+  const maxC = 100 - WALL_H_INSET_PCT - WALL_RIGHT_LABEL_GUTTER_PCT - hw;
   return Math.min(maxC, Math.max(minC, leftPct));
 }
 
