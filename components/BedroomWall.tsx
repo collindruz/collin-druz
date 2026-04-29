@@ -647,23 +647,23 @@ export function BedroomWall({ projects }: Props) {
       </p>
 
       <aside
-        className="bedroom-video-rail pointer-events-auto absolute right-[1.2%] top-[8%] z-[36] h-[82vh]"
-        aria-label="Video index"
+        className="bedroom-project-rail pointer-events-auto absolute right-[2.2%] top-[2.5%] z-[35]"
+        aria-label="Project index"
       >
-        <div ref={stripRef} className="bedroom-video-rail__scroll">
+        <div ref={stripRef} className="bedroom-project-rail__scroll">
           {projects.map((project) => (
             <button
               key={project.slug}
               type="button"
               data-video-slug={project.slug}
-              className={`bedroom-video-rail__item ${openSlug === project.slug ? "is-active" : ""}`}
+              className={`bedroom-project-rail__item ${openSlug === project.slug ? "is-active" : ""}`}
               onClick={() =>
                 setOpenSlug((cur) => (cur === project.slug ? null : project.slug))
               }
               title={project.title}
-              aria-label={project.title}
             >
-              <span className="bedroom-video-rail__bead" />
+              <span className="bedroom-project-rail__year">{project.year}</span>
+              <span className="bedroom-project-rail__title">{project.title}</span>
             </button>
           ))}
         </div>
@@ -687,9 +687,11 @@ export function BedroomWall({ projects }: Props) {
           style={{ transform: `translate3d(${cursorPos.x}px, ${cursorPos.y}px, 0)` }}
           aria-hidden
         >
-          <span className="bedroom-crosshair-cursor__v" />
-          <span className="bedroom-crosshair-cursor__h" />
-          <span className="bedroom-crosshair-cursor__center" />
+          <span className="bedroom-analog-cursor__ring bedroom-analog-cursor__ring--outer" />
+          <span className="bedroom-analog-cursor__ring bedroom-analog-cursor__ring--inner" />
+          <span className="bedroom-analog-cursor__cross bedroom-analog-cursor__cross--v" />
+          <span className="bedroom-analog-cursor__cross bedroom-analog-cursor__cross--h" />
+          <span className="bedroom-analog-cursor__dot" />
         </div>
       ) : null}
     </div>

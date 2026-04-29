@@ -108,17 +108,6 @@ function tryUnmutePlay(pl: YTInstance) {
   }
 }
 
-function clamp01(v: number): number {
-  return Math.max(0, Math.min(1, v));
-}
-
-function formatClock(sec: number): string {
-  const s = Math.max(0, Math.floor(sec));
-  const mm = Math.floor(s / 60);
-  const ss = s % 60;
-  return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
-}
-
 type DragSession = {
   pointerId: number;
   startClientX: number;
@@ -140,7 +129,6 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
   const sessionRef = useRef<DragSession | null>(null);
   const dragLiveRef = useRef({ x: 0, y: 0 });
   const dragRafRef = useRef<number | null>(null);
-  const scrubTrackRef = useRef<HTMLDivElement>(null);
 
   const [ytReady, setYtReady] = useState(false);
   const [ytSoundBlocked, setYtSoundBlocked] = useState(false);
@@ -150,10 +138,6 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const [promote, setPromote] = useState({ nx: 0, ny: 0 });
   const [resizeTick, setResizeTick] = useState(0);
-  const [mediaTime, setMediaTime] = useState(0);
-  const [mediaDuration, setMediaDuration] = useState(0);
-  const [scrubHover, setScrubHover] = useState(false);
-  const [scrubActive, setScrubActive] = useState(false);
 
   const embed = getVideoEmbed(project.videoUrl);
   const ytId =
@@ -173,43 +157,6 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
   const stillUrl = useMemo(
     () => posterStillSrc(project, embed, ytId),
     [embed, project, ytId],
-  );
-
-  const seekToRatio = useCallback(
-    (ratio: number) => {
-      const clamped = clamp01(ratio);
-      if (mediaDuration <= 0) return;
-      const target = clamped * mediaDuration;
-      if (embed.kind === "youtube") {
-        const pl = ytPlayerRef.current;
-        if (!pl) return;
-        try {
-          pl.seekTo?.(target, true);
-          pl.playVideo();
-        } catch {
-          /* ignore */
-        }
-        return;
-      }
-      if (embed.kind === "file") {
-        const v = videoRef.current;
-        if (!v) return;
-        v.currentTime = target;
-        void v.play().catch(() => {});
-      }
-    },
-    [embed.kind, mediaDuration],
-  );
-
-  const scrubAtPointer = useCallback(
-    (clientX: number) => {
-      const track = scrubTrackRef.current;
-      if (!track) return;
-      const r = track.getBoundingClientRect();
-      const ratio = (clientX - r.left) / Math.max(1, r.width);
-      seekToRatio(ratio);
-    },
-    [seekToRatio],
   );
 
   const detachWindowListeners = useRef(() => {});
@@ -463,39 +410,6 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
   }, [ytReady, open]);
 
   useEffect(() => {
-    if (!open || !embedArmed) return;
-    const pull = () => {
-      if (embed.kind === "youtube") {
-        const pl = ytPlayerRef.current;
-        if (!pl) return;
-        try {
-          const t = pl.getCurrentTime?.() ?? 0;
-          const d = pl.getDuration?.() ?? 0;
-          setMediaTime(Number.isFinite(t) ? t : 0);
-          setMediaDuration(Number.isFinite(d) ? d : 0);
-        } catch {
-          setMediaTime(0);
-          setMediaDuration(0);
-        }
-        return;
-      }
-      if (embed.kind === "file") {
-        const v = videoRef.current;
-        if (!v) return;
-        const d = Number.isFinite(v.duration) ? v.duration : 0;
-        setMediaTime(v.currentTime || 0);
-        setMediaDuration(d);
-        return;
-      }
-      setMediaTime(0);
-      setMediaDuration(0);
-    };
-    pull();
-    const id = window.setInterval(pull, 220);
-    return () => window.clearInterval(id);
-  }, [embed.kind, embedArmed, open, ytReady]);
-
-  useEffect(() => {
     const pl = ytPlayerRef.current;
     if (!pl || !ytReady || !open) return;
     const id = window.setInterval(() => {
@@ -515,25 +429,6 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
     const id = requestAnimationFrame(() => setResizeTick((n) => n + 1));
     return () => cancelAnimationFrame(id);
   }, [open, ytReady]);
-
-  useEffect(() => {
-    if (open) return;
-    setMediaTime(0);
-    setMediaDuration(0);
-    setScrubHover(false);
-    setScrubActive(false);
-  }, [open]);
-
-  useEffect(() => {
-    if (!scrubActive) return;
-    const stop = () => setScrubActive(false);
-    window.addEventListener("pointerup", stop);
-    window.addEventListener("pointercancel", stop);
-    return () => {
-      window.removeEventListener("pointerup", stop);
-      window.removeEventListener("pointercancel", stop);
-    };
-  }, [scrubActive]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -850,8 +745,6 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
 
   const outerTx = dragOffset.x + (open ? promote.nx : 0);
   const outerTy = dragOffset.y + (open ? promote.ny : 0);
-  const scrubProgress = mediaDuration > 0 ? clamp01(mediaTime / mediaDuration) : 0;
-  const showScrubber = open && (embed.kind === "youtube" || embed.kind === "file");
 
   return (
     <div
@@ -908,61 +801,6 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
                   {project.title}
                 </p>
               </div>
-              {showScrubber ? (
-                <div
-                  className={`bedroom-timecode ${scrubHover || scrubActive ? "is-visible" : ""}`}
-                  onPointerEnter={() => setScrubHover(true)}
-                  onPointerLeave={() => setScrubHover(false)}
-                >
-                  <span className="bedroom-timecode__clock">{formatClock(mediaTime)}</span>
-                  <div
-                    ref={scrubTrackRef}
-                    className="bedroom-timecode__track"
-                    role="slider"
-                    aria-label="Scrub timeline"
-                    aria-valuemin={0}
-                    aria-valuemax={Math.max(1, Math.floor(mediaDuration))}
-                    aria-valuenow={Math.max(0, Math.floor(mediaTime))}
-                    tabIndex={0}
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      setScrubActive(true);
-                      scrubAtPointer(e.clientX);
-                    }}
-                    onPointerDownCapture={(e) => e.stopPropagation()}
-                    onPointerMove={(e) => {
-                      if (!scrubActive) return;
-                      scrubAtPointer(e.clientX);
-                    }}
-                    onPointerUp={(e) => {
-                      e.stopPropagation();
-                      setScrubActive(false);
-                    }}
-                    onPointerCancel={() => setScrubActive(false)}
-                    onKeyDown={(e) => {
-                      if (e.key === "ArrowLeft") {
-                        e.preventDefault();
-                        seekToRatio(scrubProgress - 0.03);
-                      } else if (e.key === "ArrowRight") {
-                        e.preventDefault();
-                        seekToRatio(scrubProgress + 0.03);
-                      }
-                    }}
-                  >
-                    <span
-                      className="bedroom-timecode__fill"
-                      style={{ width: `${scrubProgress * 100}%` }}
-                    />
-                    <span
-                      className="bedroom-timecode__thumb"
-                      style={{ left: `${scrubProgress * 100}%` }}
-                    />
-                  </div>
-                  <span className="bedroom-timecode__clock">
-                    {formatClock(mediaDuration)}
-                  </span>
-                </div>
-              ) : null}
             </div>
           )}
         </div>
