@@ -161,6 +161,18 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
 
   const detachWindowListeners = useRef(() => {});
 
+  const resumePlayback = useCallback(() => {
+    const pl = ytPlayerRef.current;
+    if (pl && ytReady) {
+      tryUnmutePlay(pl);
+    }
+    const v = videoRef.current;
+    if (v && embed.kind === "file") {
+      v.muted = false;
+      void v.play().catch(() => {});
+    }
+  }, [embed.kind, ytReady]);
+
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -306,7 +318,7 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
         height: h,
         playerVars: {
           autoplay: 1,
-          mute: 0,
+          mute: 1,
           controls: 0,
           modestbranding: 1,
           playsinline: 1,
@@ -421,7 +433,7 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
   useEffect(() => {
     const v = videoRef.current;
     if (!v || embed.kind !== "file" || !open || !embedArmed) return;
-    v.muted = false;
+    v.muted = true;
     void v.play().catch(() => {});
   }, [embed.kind, embedArmed, open]);
 
@@ -555,10 +567,14 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
       endDragSession();
 
       if (!wasDrag) {
+        if (open) {
+          resumePlayback();
+          return;
+        }
         onToggle();
       }
     },
-    [endDragSession, onToggle],
+    [endDragSession, onToggle, open, resumePlayback],
   );
 
   const onPointerDownCapture = useCallback(
