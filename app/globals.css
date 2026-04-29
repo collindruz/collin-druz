@@ -1,0 +1,370 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-wall font-sans text-[13px] md:text-sm;
+    color: rgba(58, 60, 64, 0.62);
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  ::selection {
+    background-color: rgba(180, 186, 196, 0.35);
+    color: #3a3c40;
+  }
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/**
+ * Physical plaster / aged paint — layered, no paper grain, no digital noise.
+ */
+.bedroom-plaster-wall {
+  background-color: #e6e8e4;
+  background-image:
+    radial-gradient(
+      ellipse 55% 40% at 72% 38%,
+      rgba(255, 255, 255, 0.22) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 140% 90% at 12% 8%,
+      rgba(252, 252, 250, 0.55) 0%,
+      transparent 42%
+    ),
+    radial-gradient(
+      ellipse 100% 75% at 88% 92%,
+      rgba(218, 220, 216, 0.65) 0%,
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 48% 45%,
+      rgba(0, 0, 0, 0.025) 0%,
+      transparent 55%
+    ),
+    repeating-radial-gradient(
+      circle at 30% 40%,
+      transparent 0,
+      transparent 5px,
+      rgba(0, 0, 0, 0.022) 5px,
+      rgba(0, 0, 0, 0.022) 5.6px,
+      transparent 6.2px
+    ),
+    repeating-radial-gradient(
+      circle at 70% 60%,
+      transparent 0,
+      transparent 6px,
+      rgba(255, 255, 255, 0.05) 6px,
+      rgba(255, 255, 255, 0.05) 6.5px,
+      transparent 7.2px
+    ),
+    repeating-linear-gradient(
+      14deg,
+      transparent,
+      transparent 22px,
+      rgba(0, 0, 0, 0.011) 22px,
+      rgba(0, 0, 0, 0.011) 23px
+    ),
+    repeating-linear-gradient(
+      -7deg,
+      transparent,
+      transparent 31px,
+      rgba(255, 255, 255, 0.045) 31px,
+      rgba(255, 255, 255, 0.045) 32px
+    ),
+    repeating-linear-gradient(
+      96deg,
+      transparent,
+      transparent 48px,
+      rgba(0, 0, 0, 0.006) 48px,
+      rgba(0, 0, 0, 0.006) 49px
+    ),
+    linear-gradient(
+      180deg,
+      #ebece8 0%,
+      #e5e6e2 38%,
+      #e8eae6 72%,
+      #e1e3df 100%
+    );
+  background-size: auto, auto, auto, 9px 11px, 11px 9px, auto, auto, auto, auto;
+}
+
+/** Worn printed poster — slight fiber, not glossy. */
+.bedroom-poster-print {
+  box-shadow:
+    inset 0 0 0 Max(1px, 0.5px) rgba(58, 60, 64, 0.07),
+    inset 0 2px 6px rgba(255, 255, 255, 0.12);
+}
+
+/** Contact + lift — box-shadow only (filter drop-shadow can leave a compositing “stuck” rect while translating). */
+.bedroom-poster-slab {
+  box-shadow:
+    0 1px 2px rgba(28, 32, 38, 0.07),
+    0 6px 18px rgba(28, 32, 38, 0.1);
+}
+
+.bedroom-poster-slab--promoted {
+  box-shadow:
+    0 3px 6px rgba(22, 24, 28, 0.12),
+    0 14px 34px rgba(22, 24, 28, 0.16),
+    0 28px 56px rgba(22, 24, 28, 0.09);
+}
+
+/** Open playback (file + Vimeo only): not used for YouTube — see .bedroom-yt-embed-root. */
+.bedroom-open-media-play {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.bedroom-open-media-play iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  transform: none;
+  scale: 1;
+  pointer-events: none;
+  display: block;
+  object-fit: initial;
+  max-width: none;
+  max-height: none;
+}
+
+/**
+ * YouTube (open only): separate layer from .bedroom-closed-thumb-crop / poster image.
+ * IFrame API injects under .bedroom-yt-embed-mount — no crop wrappers, no thumbnail styles.
+ */
+.bedroom-yt-embed-root {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  background: transparent;
+  transform: none;
+}
+
+.bedroom-yt-embed-mount {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  transform: none;
+  background: transparent;
+}
+
+.bedroom-yt-embed-root iframe,
+.bedroom-yt-embed-mount iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  transform: none !important;
+  scale: 1 !important;
+  object-fit: initial !important;
+  object-position: initial !important;
+  max-width: none !important;
+  max-height: none !important;
+  pointer-events: none;
+  display: block;
+}
+
+/** Open state card: holds embed + title strip only (never .bedroom-closed-thumb-crop). */
+.bedroom-open-player-card {
+  transform: none;
+  box-sizing: border-box;
+  width: min(88vw, 520px);
+  max-width: min(88vw, 520px);
+  margin-left: auto;
+  margin-right: auto;
+  transition: width 440ms cubic-bezier(0.22, 1, 0.36, 1),
+    max-width 440ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 768px) {
+  .bedroom-open-player-card {
+    width: clamp(520px, 46vw, 760px);
+    max-width: clamp(520px, 46vw, 760px);
+  }
+}
+
+/** Cap open media height so promoted playback stays “on the wall,” not fullscreen. */
+.bedroom-open-player-card .bedroom-yt-embed-root,
+.bedroom-open-player-card .bedroom-open-media-play {
+  max-height: 60vh;
+}
+
+@media (min-width: 768px) {
+  .bedroom-open-player-card .bedroom-yt-embed-root,
+  .bedroom-open-player-card .bedroom-open-media-play {
+    max-height: 65vh;
+  }
+}
+
+/**
+ * Bottom title strip — open player only (thumbnail stays titleless when closed).
+ */
+.bedroom-poster-title-strip {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 6px 10px;
+  line-height: 1;
+  min-height: 0;
+  background: linear-gradient(180deg, #1e2024 0%, #121418 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.bedroom-poster-title-strip__text {
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: rgba(235, 236, 238, 0.92);
+}
+
+/**
+ * Closed poster: thumbnail only (.bedroom-closed-thumb-crop). Never wrap iframe.
+ */
+.bedroom-poster-thumb-only {
+  transform: none;
+}
+
+.bedroom-closed-thumb-crop {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.bedroom-closed-thumb-crop .bedroom-closed-thumb-crop__img {
+  object-fit: cover !important;
+  object-position: center 58%;
+  transform: scale(1.12);
+  transform-origin: center center;
+}
+
+/** Layout-only slot: no paint, no shadow (wall shows through). */
+.bedroom-poster-flow-spacer {
+  box-shadow: none !important;
+  outline: none !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+/**
+ * Open binder strip — same minimal layout as before; analog is overlay-only.
+ */
+.bedroom-binder-analog {
+  box-shadow:
+    0 4px 14px rgba(28, 32, 38, 0.14),
+    inset 0 0 0 1px rgba(48, 50, 54, 0.07);
+}
+
+/** Faint wear on the still only — keeps title legible (z above this layer). */
+.bedroom-binder-analog__finish {
+  pointer-events: none;
+  opacity: 0.3;
+  mix-blend-mode: multiply;
+  background-image:
+    radial-gradient(
+      ellipse 85% 70% at 50% 30%,
+      rgba(255, 255, 255, 0.06) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 70% 85%,
+      rgba(40, 42, 46, 0.07) 0%,
+      transparent 50%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(45, 48, 52, 0.035) 3px,
+      rgba(45, 48, 52, 0.035) 4px
+    ),
+    linear-gradient(104deg, transparent 47%, rgba(0, 0, 0, 0.045) 49%, transparent 51%),
+    linear-gradient(93deg, transparent 73%, rgba(255, 255, 255, 0.05) 74%, transparent 76%);
+}
+
+[data-wall-poster] {
+  outline: none;
+  border: none;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+
+[data-wall-poster] * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+[data-wall-poster] img,
+[data-wall-poster] picture > img {
+  -webkit-user-drag: none;
+  user-select: none;
+  display: block;
+}
+
+[data-wall-poster] video {
+  display: block;
+  -webkit-user-drag: none;
+}
+
+/** Never apply poster/thumbnail semantics to embedded players. */
+[data-wall-poster] iframe {
+  transform: none !important;
+  scale: 1 !important;
+  object-fit: initial !important;
+  object-position: initial !important;
+}
+
+/**
+ * Pointer-drag only — suppress browser drag image, selection rings, and focus chrome.
+ */
+.bedroom-poster-shell--dragging {
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none !important;
+}
