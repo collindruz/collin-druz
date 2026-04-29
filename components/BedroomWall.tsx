@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BedroomPoster,
   type PosterWallLayout,
@@ -533,7 +533,12 @@ function posterPreloadUrl(p: Project): string | null {
 
 export function BedroomWall({ projects }: Props) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+  const [cursorVisible, setCursorVisible] = useState(false);
+  const [cursorActive, setCursorActive] = useState(false);
+  const [cursorEnabled, setCursorEnabled] = useState(false);
   const mailHref = `mailto:${CONTACT_EMAIL}`;
+  const stripRef = useRef<HTMLDivElement>(null);
   const wallLayouts = useMemo(
     () => layoutsForProjects(projects),
     [projects],
@@ -570,6 +575,57 @@ export function BedroomWall({ projects }: Props) {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(pointer: fine)");
+    const apply = () => setCursorEnabled(media.matches);
+    apply();
+    media.addEventListener?.("change", apply);
+    return () => media.removeEventListener?.("change", apply);
+  }, []);
+
+  useEffect(() => {
+    if (!cursorEnabled) return;
+    document.body.classList.add("analog-cursor-active");
+    return () => document.body.classList.remove("analog-cursor-active");
+  }, [cursorEnabled]);
+
+  useEffect(() => {
+    if (!cursorEnabled) return;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      setCursorPos({ x: e.clientX, y: e.clientY });
+      setCursorVisible(true);
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") setCursorActive(true);
+    };
+    const onUp = () => setCursorActive(false);
+    const onLeave = () => setCursorVisible(false);
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("blur", onLeave);
+    document.addEventListener("mouseleave", onLeave);
+
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("blur", onLeave);
+      document.removeEventListener("mouseleave", onLeave);
+    };
+  }, [cursorEnabled]);
+
+  useEffect(() => {
+    if (!openSlug) return;
+    const strip = stripRef.current;
+    if (!strip) return;
+    const active = strip.querySelector<HTMLElement>(`[data-video-slug="${openSlug}"]`);
+    active?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }, [openSlug]);
+
   return (
     <div className="bedroom-wall relative z-0 h-[100dvh] max-h-[100dvh] min-h-0 w-full max-w-[100vw] overflow-hidden bg-[#e6e8e4] text-charcoal/60">
       <div
@@ -590,6 +646,29 @@ export function BedroomWall({ projects }: Props) {
         </a>
       </p>
 
+      <aside
+        className="bedroom-video-strip pointer-events-auto absolute bottom-[3.2%] right-[3.2%] z-[35]"
+        aria-label="Video index"
+      >
+        <div ref={stripRef} className="bedroom-video-strip__scroll">
+          {projects.map((project) => (
+            <button
+              key={project.slug}
+              type="button"
+              data-video-slug={project.slug}
+              className={`bedroom-video-strip__item ${openSlug === project.slug ? "is-active" : ""}`}
+              onClick={() =>
+                setOpenSlug((cur) => (cur === project.slug ? null : project.slug))
+              }
+              title={project.title}
+            >
+              <span className="bedroom-video-strip__year">{project.year}</span>
+              <span className="bedroom-video-strip__title">{project.title}</span>
+            </button>
+          ))}
+        </div>
+      </aside>
+
       {projects.map((project, i) => (
         <BedroomPoster
           key={project.slug}
@@ -601,6 +680,17 @@ export function BedroomWall({ projects }: Props) {
           }}
         />
       ))}
+
+      {cursorEnabled ? (
+        <div
+          className={`bedroom-analog-cursor ${cursorVisible ? "is-visible" : ""} ${cursorActive ? "is-active" : ""}`}
+          style={{ transform: `translate3d(${cursorPos.x}px, ${cursorPos.y}px, 0)` }}
+          aria-hidden
+        >
+          <span className="bedroom-analog-cursor__ring" />
+          <span className="bedroom-analog-cursor__dot" />
+        </div>
+      ) : null}
     </div>
   );
 }
