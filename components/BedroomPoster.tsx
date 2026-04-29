@@ -84,6 +84,7 @@ type Props = {
   project: Project;
   wallLayout: PosterWallLayout;
   open: boolean;
+  railHoverActive: boolean;
   onToggle: () => void;
 };
 
@@ -127,7 +128,13 @@ function formatClock(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
+export function BedroomPoster({
+  project,
+  wallLayout,
+  open,
+  railHoverActive,
+  onToggle,
+}: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
   const openCardRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
@@ -856,11 +863,11 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
         aria-label={`${project.title}. Drag to reposition. Activate to ${open ? "close" : "open"}.`}
       >
         <div
-          className={`bedroom-poster-slab origin-[50%_42%] ${open ? "bedroom-poster-slab--promoted" : ""} ${isDragging ? "select-none" : ""}`}
+          className={`bedroom-poster-slab origin-[50%_42%] ${open ? "bedroom-poster-slab--promoted" : ""} ${railHoverActive ? "bedroom-poster-slab--rail-hover" : ""} ${isDragging ? "select-none" : ""}`}
           style={{
             transition: isDragging
               ? "none"
-              : "box-shadow 440ms cubic-bezier(0.22, 1, 0.36, 1)",
+              : "box-shadow 440ms cubic-bezier(0.22, 1, 0.36, 1), transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
           }}
         >
           {!open ? (

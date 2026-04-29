@@ -66,7 +66,7 @@ const HALF_WIDTH_VW: Record<ProjectSize, number> = {
 /** Minimum space from viewport edge to poster’s outer extent (readable inset). */
 const WALL_H_INSET_PCT = 5;
 /** Reserved gutter for right-side project labels (desktop-first safety margin). */
-const WALL_RIGHT_LABEL_GUTTER_PCT = 24;
+const WALL_RIGHT_LABEL_GUTTER_PCT = 14;
 
 /** Additional horizontal radius (~hand jitter vs narrow viewports). */
 const WALL_HAND_SLACK_PCT = 2.6;
@@ -535,6 +535,7 @@ function posterPreloadUrl(p: Project): string | null {
 
 export function BedroomWall({ projects }: Props) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
+  const [hoverSlug, setHoverSlug] = useState<string | null>(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [cursorVisible, setCursorVisible] = useState(false);
   const [cursorActive, setCursorActive] = useState(false);
@@ -682,6 +683,10 @@ export function BedroomWall({ projects }: Props) {
               onClick={() =>
                 setOpenSlug((cur) => (cur === project.slug ? null : project.slug))
               }
+              onMouseEnter={() => setHoverSlug(project.slug)}
+              onMouseLeave={() => setHoverSlug((cur) => (cur === project.slug ? null : cur))}
+              onFocus={() => setHoverSlug(project.slug)}
+              onBlur={() => setHoverSlug((cur) => (cur === project.slug ? null : cur))}
               title={project.title}
             >
               <span className="bedroom-project-rail__year">{project.year}</span>
@@ -697,6 +702,7 @@ export function BedroomWall({ projects }: Props) {
           project={project}
           wallLayout={wallLayouts[i]!}
           open={openSlug === project.slug}
+          railHoverActive={hoverSlug === project.slug}
           onToggle={() => {
             setOpenSlug((cur) => (cur === project.slug ? null : project.slug));
           }}
