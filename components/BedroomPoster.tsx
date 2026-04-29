@@ -119,6 +119,14 @@ type DragSession = {
   longPressTimer: ReturnType<typeof setTimeout> | null;
 };
 
+function formatClock(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const total = Math.floor(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
   const openCardRef = useRef<HTMLDivElement>(null);
@@ -138,6 +146,9 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const [promote, setPromote] = useState({ nx: 0, ny: 0 });
   const [resizeTick, setResizeTick] = useState(0);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const [playbackDuration, setPlaybackDuration] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
 
   const embed = getVideoEmbed(project.videoUrl);
   const ytId =
@@ -436,6 +447,73 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
     v.muted = true;
     void v.play().catch(() => {});
   }, [embed.kind, embedArmed, open]);
+
+  useEffect(() => {
+    if (!open) {
+      setPlaybackTime(0);
+      setPlaybackDuration(0);
+      setIsScrubbing(false);
+      return;
+    }
+
+    if (embed.kind === "file") {
+      const v = videoRef.current;
+      if (!v) return;
+      const sync = () => {
+        if (isScrubbing) return;
+        setPlaybackTime(v.currentTime || 0);
+        setPlaybackDuration(v.duration || 0);
+      };
+      sync();
+      v.addEventListener("timeupdate", sync);
+      v.addEventListener("loadedmetadata", sync);
+      v.addEventListener("durationchange", sync);
+      return () => {
+        v.removeEventListener("timeupdate", sync);
+        v.removeEventListener("loadedmetadata", sync);
+        v.removeEventListener("durationchange", sync);
+      };
+    }
+
+    if (embed.kind === "youtube" && ytReady) {
+      const pl = ytPlayerRef.current;
+      if (!pl) return;
+      const id = window.setInterval(() => {
+        try {
+          const current = pl.getCurrentTime?.() ?? 0;
+          const dur = pl.getDuration?.() ?? 0;
+          if (isScrubbing) return;
+          setPlaybackTime(current);
+          setPlaybackDuration(dur);
+        } catch {
+          /* ignore */
+        }
+      }, 250);
+      return () => clearInterval(id);
+    }
+  }, [embed.kind, isScrubbing, open, ytReady]);
+
+  const handleScrub = useCallback(
+    (nextRaw: string) => {
+      const next = Number(nextRaw);
+      if (!Number.isFinite(next)) return;
+      setPlaybackTime(next);
+      if (embed.kind === "file") {
+        const v = videoRef.current;
+        if (v) v.currentTime = next;
+        return;
+      }
+      if (embed.kind === "youtube" && ytReady) {
+        const pl = ytPlayerRef.current;
+        try {
+          pl?.seekTo?.(next, true);
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+    [embed.kind, ytReady],
+  );
 
   useEffect(() => {
     const v = videoRef.current;
@@ -796,6 +874,27 @@ export function BedroomPoster({ project, wallLayout, open, onToggle }: Props) {
               style={edgeStyle}
             >
               {videoBlock}
+              <div className="bedroom-timecode-rail" aria-label="Playback timeline">
+                <span className="bedroom-timecode-rail__clock">
+                  {formatClock(playbackTime)}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={Math.max(0.1, playbackDuration || 0)}
+                  step={0.01}
+                  value={Math.min(playbackTime, Math.max(0.1, playbackDuration || 0))}
+                  onPointerDown={() => setIsScrubbing(true)}
+                  onPointerUp={() => setIsScrubbing(false)}
+                  onBlur={() => setIsScrubbing(false)}
+                  onChange={(e) => handleScrub(e.target.value)}
+                  className="bedroom-timecode-rail__range"
+                  aria-label="Seek timeline"
+                />
+                <span className="bedroom-timecode-rail__clock bedroom-timecode-rail__clock--end">
+                  {formatClock(playbackDuration)}
+                </span>
+              </div>
               <div className="bedroom-poster-title-strip">
                 <p className="bedroom-poster-title-strip__text line-clamp-2">
                   {project.title}

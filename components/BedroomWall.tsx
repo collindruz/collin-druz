@@ -667,7 +667,7 @@ export function BedroomWall({ projects }: Props) {
       </p>
 
       <aside
-        className="bedroom-project-rail pointer-events-auto absolute right-[2.2%] top-[2.5%] z-[110]"
+        className="bedroom-project-rail pointer-events-none absolute right-[2.2%] top-[2.5%] z-[110]"
         aria-label="Project index"
       >
         <div ref={stripRef} className="bedroom-project-rail__scroll">
