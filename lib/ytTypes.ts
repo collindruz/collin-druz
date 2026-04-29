@@ -5,6 +5,9 @@ export type YTInstance = {
   mute(): void;
   unMute(): void;
   destroy(): void;
+  getCurrentTime?(): number;
+  getDuration?(): number;
+  seekTo?(seconds: number, allowSeekAhead?: boolean): void;
   isMuted?: () => boolean;
   getPlayerState?: () => number;
   /** Match IFrame API — keeps embed at shell pixels (avoids “100%” resolving wrong / zoomed pre-play UI). */
