@@ -536,6 +536,8 @@ function posterPreloadUrl(p: Project): string | null {
 export function BedroomWall({ projects }: Props) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
   const [hoverSlug, setHoverSlug] = useState<string | null>(null);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [coarsePointer, setCoarsePointer] = useState(false);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [cursorVisible, setCursorVisible] = useState(false);
   const [cursorActive, setCursorActive] = useState(false);
@@ -584,6 +586,12 @@ export function BedroomWall({ projects }: Props) {
     const onPointerDown = (e: PointerEvent) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
+      if (
+        t.closest("[data-project-sheet]") ||
+        t.closest("[data-mobile-index-trigger]")
+      ) {
+        return;
+      }
       if (!t.closest("[data-wall-poster]")) {
         setOpenSlug(null);
       }
@@ -591,6 +599,24 @@ export function BedroomWall({ projects }: Props) {
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(pointer: coarse)");
+    const apply = () => setCoarsePointer(media.matches);
+    apply();
+    media.addEventListener?.("change", apply);
+    return () => media.removeEventListener?.("change", apply);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileSheetOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileSheetOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -649,6 +675,8 @@ export function BedroomWall({ projects }: Props) {
     active?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   }, [openSlug]);
 
+  const railHoverBoost = !coarsePointer && hoverSlug != null;
+
   return (
     <div className="bedroom-wall relative z-0 h-[100dvh] max-h-[100dvh] min-h-0 w-full max-w-[100vw] overflow-hidden bg-[#e6e8e4] text-charcoal/60">
       <div
@@ -669,8 +697,17 @@ export function BedroomWall({ projects }: Props) {
         </a>
       </p>
 
+      <button
+        type="button"
+        data-mobile-index-trigger
+        className="pointer-events-auto absolute bottom-[max(3%,env(safe-area-inset-bottom))] right-[3.5%] z-[125] min-[821px]:hidden font-sans text-[9px] font-medium uppercase tracking-[0.18em] text-charcoal/38"
+        onClick={() => setMobileSheetOpen(true)}
+      >
+        Index
+      </button>
+
       <aside
-        className="bedroom-project-rail pointer-events-none absolute right-[2.2%] top-[2.5%] z-[110]"
+        className="bedroom-project-rail pointer-events-none absolute right-[2.2%] top-[2.5%] z-[110] hidden min-[821px]:block"
         aria-label="Project index"
       >
         <div ref={stripRef} className="bedroom-project-rail__scroll">
@@ -696,13 +733,61 @@ export function BedroomWall({ projects }: Props) {
         </div>
       </aside>
 
+      <div
+        className={`bedroom-mobile-sheet min-[821px]:hidden ${mobileSheetOpen ? "is-open" : ""}`}
+        aria-hidden={!mobileSheetOpen}
+      >
+        <button
+          type="button"
+          className="bedroom-mobile-sheet__backdrop"
+          aria-label="Close index"
+          onClick={() => setMobileSheetOpen(false)}
+        />
+        <div
+          data-project-sheet
+          className="bedroom-mobile-sheet__panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Project index"
+        >
+          <div className="bedroom-mobile-sheet__header">
+            <p className="bedroom-mobile-sheet__title">Index</p>
+            <button
+              type="button"
+              className="bedroom-mobile-sheet__close"
+              aria-label="Close"
+              onClick={() => setMobileSheetOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+          <div className="bedroom-mobile-sheet__scroll">
+            {projectsByYearDesc.map((project) => (
+              <button
+                key={`sheet-${project.slug}`}
+                type="button"
+                data-video-slug={project.slug}
+                className={`bedroom-mobile-sheet__item ${openSlug === project.slug ? "is-active" : ""}`}
+                onClick={() => {
+                  setOpenSlug((cur) => (cur === project.slug ? null : project.slug));
+                  setMobileSheetOpen(false);
+                }}
+              >
+                <span className="bedroom-mobile-sheet__year">{project.year}</span>
+                <span className="bedroom-mobile-sheet__title">{project.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {projects.map((project, i) => (
         <BedroomPoster
           key={project.slug}
           project={project}
           wallLayout={wallLayouts[i]!}
           open={openSlug === project.slug}
-          railHoverActive={hoverSlug === project.slug}
+          railHoverActive={railHoverBoost && hoverSlug === project.slug}
           onToggle={() => {
             setOpenSlug((cur) => (cur === project.slug ? null : project.slug));
           }}
