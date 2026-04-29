@@ -838,7 +838,7 @@ export function BedroomPoster({
         top: `${wallLayout.topPct}%`,
         left: `${wallLayout.leftPct}%`,
         width: wallLayout.width,
-        zIndex: isDragging ? 92 : open ? 72 : wallLayout.zIndex,
+        zIndex: isDragging ? 92 : railHoverActive ? 82 : open ? 72 : wallLayout.zIndex,
         transform: `translate(calc(-50% + ${wallLayout.offsetXPx}px), calc(-50% + ${wallLayout.offsetYPx}px)) rotate(${wallLayout.rotateDeg}deg)`,
       }}
     >
