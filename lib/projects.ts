@@ -237,7 +237,7 @@ export const projects: Project[] = [
     year: "2024",
     role: "Producer",
     client: "leboncoin",
-    director: "Thomas Lilti",
+    director: "Tim Erem",
     videoUrl: "https://www.youtube.com/watch?v=nAiqPOT8ohA",
     youtubeId: "nAiqPOT8ohA",
     thumbnail: "https://img.youtube.com/vi/nAiqPOT8ohA/hqdefault.jpg",
