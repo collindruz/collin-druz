@@ -114,6 +114,9 @@ const HERO_OPTIONAL_SLOTS: Array<{ left: number; top: number }> = [
   { left: 76.5, top: 22.6 },
 ];
 
+/** After swaps: move Taste down only (see Collin Druz block ~top 3%). Increase = further down. */
+const TASTE_VERTICAL_NUDGE_TOP_PCT = 11;
+
 /** Curated importance: recency + priority + featured + size (for vertical gradient). */
 function importance(idx: number, p: Project): number {
   let v = recencyScore(idx, p);
@@ -294,6 +297,20 @@ function swapWallLayoutsBySlug(
   const tmp = layouts[ia]!;
   layouts[ia] = layouts[ib]!;
   layouts[ib] = tmp;
+}
+
+function nudgeLayoutTopPctOnly(
+  projects: Project[],
+  layouts: PosterWallLayout[],
+  slug: string,
+  deltaTopPct: number,
+) {
+  const i = projects.findIndex((p) => p.slug === slug);
+  if (i < 0) return;
+  const L = layouts[i];
+  if (!L) return;
+  const next = L.topPct + deltaTopPct;
+  L.topPct = Math.round(Math.min(81, Math.max(13.5, next)) * 10) / 10;
 }
 
 /**
@@ -550,6 +567,13 @@ function layoutsForProjects(projects: Project[]): PosterWallLayout[] {
     out,
     "smirnoff-live-louder-karol-g",
     "sabrina-carpenter-tears",
+  );
+
+  nudgeLayoutTopPctOnly(
+    projects,
+    out,
+    "sabrina-carpenter-taste",
+    TASTE_VERTICAL_NUDGE_TOP_PCT,
   );
 
   return out;
