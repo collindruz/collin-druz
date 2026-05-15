@@ -313,6 +313,19 @@ function nudgeLayoutTopPctOnly(
   L.topPct = Math.round(Math.min(81, Math.max(13.5, next)) * 10) / 10;
 }
 
+/** Re-bind clamp width after slot swaps so it matches `Project.size`. */
+function syncLayoutWidthToProjectSize(
+  projects: Project[],
+  layouts: PosterWallLayout[],
+  slug: string,
+) {
+  const i = projects.findIndex((p) => p.slug === slug);
+  if (i < 0) return;
+  const L = layouts[i];
+  if (!L) return;
+  L.width = widthForProjectSize(projects[i]!.size);
+}
+
 /**
  * Vertical density gradient: breathable hero band → tighter mid → dense bottom.
  */
@@ -574,6 +587,18 @@ function layoutsForProjects(projects: Project[]): PosterWallLayout[] {
     out,
     "sabrina-carpenter-taste",
     TASTE_VERTICAL_NUDGE_TOP_PCT,
+  );
+
+  /** Sofia ↔ Tears catalog `size` swap: keep wall `width` in sync with data after slot swaps. */
+  syncLayoutWidthToProjectSize(
+    projects,
+    out,
+    "sofia-carson-hold-on-to-me",
+  );
+  syncLayoutWidthToProjectSize(
+    projects,
+    out,
+    "sabrina-carpenter-tears",
   );
 
   return out;

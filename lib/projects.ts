@@ -659,7 +659,7 @@ export const projects: Project[] = [
     description: "Official video.",
     featured: false,
     priority: "standard",
-    size: "md",
+    size: "lg",
   },
   {
     slug: "higher-learning-podcast-frequency",
