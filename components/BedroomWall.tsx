@@ -545,12 +545,14 @@ const PosterWallCell = memo(function PosterWallCell({
   wallLayout,
   open,
   railHoverActive,
+  pointerFine,
   onTogglePoster,
 }: {
   project: Project;
   wallLayout: PosterWallLayout;
   open: boolean;
   railHoverActive: boolean;
+  pointerFine: boolean;
   onTogglePoster: (slug: string) => void;
 }) {
   const onToggle = useCallback(() => {
@@ -563,6 +565,7 @@ const PosterWallCell = memo(function PosterWallCell({
       wallLayout={wallLayout}
       open={open}
       railHoverActive={railHoverActive}
+      pointerFine={pointerFine}
       onToggle={onToggle}
     />
   );
@@ -750,18 +753,23 @@ export function BedroomWall({ projects }: Props) {
         aria-hidden
       />
 
-      <p className="pointer-events-none absolute left-[3%] top-[2.5%] z-[30] max-w-[9rem] font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-charcoal/30 md:left-[4%] md:top-[3%] md:text-[11px]">
+      <a
+        href={mailHref}
+        aria-label={`Email ${CONTACT_EMAIL}`}
+        className="pointer-events-auto absolute left-[3%] top-[2.5%] z-[30] max-w-[9rem] font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-charcoal/30 outline-none transition-colors duration-500 hover:text-black focus-visible:text-black md:left-[4%] md:top-[3%] md:text-[11px]"
+      >
         Collin Druz
-      </p>
+      </a>
 
-      <p className="pointer-events-auto absolute bottom-[4%] left-[4%] z-[30] max-w-[14rem] -rotate-[0.4deg] font-sans text-[10px] font-normal tracking-[0.06em] text-charcoal/26 md:bottom-[5%] md:left-[5%] md:text-[11px]">
+      <div className="pointer-events-auto absolute bottom-[4%] left-[4%] z-[30] max-w-[14rem] -rotate-[0.4deg] font-sans text-[10px] font-normal tracking-[0.06em] text-charcoal/26 transition-colors duration-500 md:bottom-[5%] md:left-[5%] md:text-[11px]">
         <a
           href={mailHref}
-          className="border-b border-transparent transition-colors duration-[900ms] hover:border-charcoal/12 hover:text-charcoal/34"
+          aria-label={`Email ${CONTACT_EMAIL}`}
+          className="border-b border-transparent text-inherit outline-none transition-colors duration-500 hover:border-black/25 hover:text-black focus-visible:border-black/25 focus-visible:text-black"
         >
           {CONTACT_EMAIL}
         </a>
-      </p>
+      </div>
 
       <button
         type="button"
@@ -867,6 +875,7 @@ export function BedroomWall({ projects }: Props) {
           wallLayout={wallLayouts[i]!}
           open={openSlug === project.slug}
           railHoverActive={railHoverBoost && hoverSlug === project.slug}
+          pointerFine={!coarsePointer}
           onTogglePoster={onTogglePoster}
         />
       ))}

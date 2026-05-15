@@ -86,6 +86,8 @@ type Props = {
   wallLayout: PosterWallLayout;
   open: boolean;
   railHoverActive: boolean;
+  /** False on coarse pointers — thumbnail hover lift matches index rail behavior on desktop only. */
+  pointerFine: boolean;
   onToggle: () => void;
 };
 
@@ -134,6 +136,7 @@ function BedroomPosterInner({
   wallLayout,
   open,
   railHoverActive,
+  pointerFine,
   onToggle,
 }: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
@@ -157,6 +160,12 @@ function BedroomPosterInner({
   const [playbackTime, setPlaybackTime] = useState(0);
   const [playbackDuration, setPlaybackDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
+  const [thumbHover, setThumbHover] = useState(false);
+
+  const hoverLift =
+    !isDragging &&
+    (railHoverActive ||
+      (pointerFine && thumbHover && !open));
 
   const embed = getVideoEmbed(project.videoUrl);
   const ytId =
@@ -839,7 +848,7 @@ function BedroomPosterInner({
         top: `${wallLayout.topPct}%`,
         left: `${wallLayout.leftPct}%`,
         width: wallLayout.width,
-        zIndex: isDragging ? 92 : railHoverActive ? 82 : open ? 72 : wallLayout.zIndex,
+        zIndex: isDragging ? 92 : hoverLift ? 82 : open ? 72 : wallLayout.zIndex,
         transform: `translate(calc(-50% + ${wallLayout.offsetXPx}px), calc(-50% + ${wallLayout.offsetYPx}px)) rotate(${wallLayout.rotateDeg}deg)`,
       }}
     >
@@ -860,6 +869,10 @@ function BedroomPosterInner({
             onToggle();
           }
         }}
+        onMouseEnter={() => {
+          if (pointerFine) setThumbHover(true);
+        }}
+        onMouseLeave={() => setThumbHover(false)}
         aria-expanded={open}
         aria-label={
           project.director
@@ -868,7 +881,7 @@ function BedroomPosterInner({
         }
       >
         <div
-          className={`bedroom-poster-slab origin-[50%_42%] ${open ? "bedroom-poster-slab--promoted" : ""} ${railHoverActive ? "bedroom-poster-slab--rail-hover" : ""} ${isDragging ? "select-none" : ""}`}
+          className={`bedroom-poster-slab origin-[50%_42%] ${open ? "bedroom-poster-slab--promoted" : ""} ${hoverLift ? "bedroom-poster-slab--rail-hover" : ""} ${isDragging ? "select-none" : ""}`}
           style={{
             transition: isDragging
               ? "none"
