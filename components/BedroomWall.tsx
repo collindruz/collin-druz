@@ -281,6 +281,21 @@ function pickHeroes(metas: WallMeta[]): WallMeta[] {
   return [...keys, ...candidates.slice(0, optionalMax)];
 }
 
+/** Exchange final wall slots after placement (keeps collision pass; swaps footprint + position). */
+function swapWallLayoutsBySlug(
+  projects: Project[],
+  layouts: PosterWallLayout[],
+  slugA: string,
+  slugB: string,
+) {
+  const ia = projects.findIndex((p) => p.slug === slugA);
+  const ib = projects.findIndex((p) => p.slug === slugB);
+  if (ia < 0 || ib < 0) return;
+  const tmp = layouts[ia]!;
+  layouts[ia] = layouts[ib]!;
+  layouts[ib] = tmp;
+}
+
 /**
  * Vertical density gradient: breathable hero band → tighter mid → dense bottom.
  */
@@ -523,6 +538,20 @@ function layoutsForProjects(projects: Project[]): PosterWallLayout[] {
     }
   }
 
+  /** Curator swaps: Sofia ↔ Taste (hero triangle), Smirnoff ↔ Tears. */
+  swapWallLayoutsBySlug(
+    projects,
+    out,
+    "sofia-carson-hold-on-to-me",
+    "sabrina-carpenter-taste",
+  );
+  swapWallLayoutsBySlug(
+    projects,
+    out,
+    "smirnoff-live-louder-karol-g",
+    "sabrina-carpenter-tears",
+  );
+
   return out;
 }
 
@@ -742,7 +771,7 @@ export function BedroomWall({ projects }: Props) {
   const railHoverBoost = !coarsePointer && hoverSlug != null;
 
   return (
-    <div className="bedroom-wall relative z-0 h-[100svh] max-h-[100svh] min-h-0 w-full max-w-[100vw] overflow-hidden bg-[#e6e8e4] text-charcoal/60">
+    <div className="bedroom-wall relative z-0 h-[100dvh] max-h-[100dvh] min-h-0 w-full max-w-[100vw] overflow-hidden bg-[#e6e8e4] text-charcoal/60">
       <div
         className="bedroom-plaster-wall pointer-events-none absolute inset-0 z-0"
         aria-hidden
@@ -756,14 +785,17 @@ export function BedroomWall({ projects }: Props) {
         Collin Druz
       </a>
 
-      <div className="pointer-events-auto absolute bottom-[4%] left-[4%] z-[30] max-w-[14rem] -rotate-[0.4deg] font-sans text-[10px] font-normal tracking-[0.06em] text-charcoal/26 transition-colors duration-500 md:bottom-[5%] md:left-[5%] md:text-[11px]">
+      <div className="pointer-events-none absolute bottom-[4%] left-[4%] z-[30] max-w-[16rem] -rotate-[0.4deg] font-sans text-[10px] font-normal tracking-[0.06em] text-charcoal/26 md:bottom-[5%] md:left-[5%] md:text-[11px]">
         <a
           href={mailHref}
           aria-label={`Email ${CONTACT_EMAIL}`}
-          className="border-b border-transparent text-inherit outline-none transition-colors duration-500 hover:border-black/25 hover:text-black focus-visible:border-black/25 focus-visible:text-black"
+          className="pointer-events-auto border-b border-transparent text-inherit outline-none transition-colors duration-500 hover:border-black/25 hover:text-black focus-visible:border-black/25 focus-visible:text-black"
         >
           {CONTACT_EMAIL}
         </a>
+        <p className="mt-2 max-w-[14rem] text-[9px] leading-snug tracking-[0.05em] text-charcoal/20 md:text-[10px] md:tracking-[0.055em]">
+          Drag posters to move them. Click or press Enter to open and play.
+        </p>
       </div>
 
       <button

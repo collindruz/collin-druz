@@ -86,7 +86,7 @@ type Props = {
   wallLayout: PosterWallLayout;
   open: boolean;
   railHoverActive: boolean;
-  /** False on coarse pointers — thumbnail hover lift matches index rail behavior on desktop only. */
+  /** False on coarse pointers — thumbnail hover still preloads stills on desktop. */
   pointerFine: boolean;
   onToggle: () => void;
 };
@@ -164,7 +164,8 @@ function BedroomPosterInner({
   const [thumbHover, setThumbHover] = useState(false);
   const [thumbReveal, setThumbReveal] = useState(false);
 
-  const hoverLift =
+  /** Stack order only (no hover scale — transform fights shell translate). */
+  const hoverStack =
     !isDragging &&
     (railHoverActive ||
       (pointerFine && thumbHover && !open));
@@ -910,7 +911,7 @@ function BedroomPosterInner({
         top: `${wallLayout.topPct}%`,
         left: `${wallLayout.leftPct}%`,
         width: wallLayout.width,
-        zIndex: isDragging ? 92 : hoverLift ? 82 : open ? 72 : wallLayout.zIndex,
+        zIndex: isDragging ? 92 : hoverStack ? 82 : open ? 72 : wallLayout.zIndex,
         transform: `translate(calc(-50% + ${wallLayout.offsetXPx}px), calc(-50% + ${wallLayout.offsetYPx}px)) rotate(${wallLayout.rotateDeg}deg)`,
       }}
     >
@@ -943,11 +944,11 @@ function BedroomPosterInner({
         }
       >
         <div
-          className={`bedroom-poster-slab origin-[50%_42%] ${open ? "bedroom-poster-slab--promoted" : ""} ${hoverLift ? "bedroom-poster-slab--rail-hover" : ""} ${isDragging ? "select-none" : ""}`}
+          className={`bedroom-poster-slab origin-[50%_42%] ${open ? "bedroom-poster-slab--promoted" : ""} ${isDragging ? "select-none" : ""}`}
           style={{
             transition: isDragging
               ? "none"
-              : "box-shadow 440ms cubic-bezier(0.22, 1, 0.36, 1), transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+              : "box-shadow 440ms cubic-bezier(0.22, 1, 0.36, 1)",
           }}
         >
           {!open ? (
