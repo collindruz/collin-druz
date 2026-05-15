@@ -423,7 +423,7 @@
 
 .bedroom-project-rail {
   width: min(22vw, 290px);
-  height: 94dvh;
+  height: 94svh;
   isolation: isolate;
 }
 
@@ -677,7 +677,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    max-height: min(82dvh, 640px);
+    max-height: min(82svh, 640px);
     transform: translateY(104%);
     transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
     border-radius: 14px 14px 0 0;
@@ -725,7 +725,7 @@
   }
 
   .bedroom-mobile-sheet__scroll {
-    max-height: calc(min(82dvh, 640px) - 52px);
+    max-height: calc(min(82svh, 640px) - 52px);
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;

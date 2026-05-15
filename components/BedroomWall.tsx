@@ -742,7 +742,7 @@ export function BedroomWall({ projects }: Props) {
   const railHoverBoost = !coarsePointer && hoverSlug != null;
 
   return (
-    <div className="bedroom-wall relative z-0 h-[100dvh] max-h-[100dvh] min-h-0 w-full max-w-[100vw] overflow-hidden bg-[#e6e8e4] text-charcoal/60">
+    <div className="bedroom-wall relative z-0 h-[100svh] max-h-[100svh] min-h-0 w-full max-w-[100vw] overflow-hidden bg-[#e6e8e4] text-charcoal/60">
       <div
         className="bedroom-plaster-wall pointer-events-none absolute inset-0 z-0"
         aria-hidden
