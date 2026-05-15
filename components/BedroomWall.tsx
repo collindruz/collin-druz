@@ -114,9 +114,7 @@ const HERO_OPTIONAL_SLOTS: Array<{ left: number; top: number }> = [
   { left: 76.5, top: 22.6 },
 ];
 
-/** After Tears ↔ Charlie: shift Tears down/right so slab clears “Collin Druz” (top-left). */
-const TEARS_NAME_CLEAR_NUDGE_TOP_PCT = 5.8;
-const TEARS_NAME_CLEAR_NUDGE_LEFT_PCT = 3.4;
+
 
 /** Curated importance: recency + priority + featured + size (for vertical gradient). */
 function importance(idx: number, p: Project): number {
@@ -283,54 +281,6 @@ function pickHeroes(metas: WallMeta[]): WallMeta[] {
     .sort((a, b) => b.imp - a.imp);
 
   return [...keys, ...candidates.slice(0, optionalMax)];
-}
-
-/** Exchange final wall slots after placement (keeps collision pass; swaps footprint + position). */
-function swapWallLayoutsBySlug(
-  projects: Project[],
-  layouts: PosterWallLayout[],
-  slugA: string,
-  slugB: string,
-) {
-  const ia = projects.findIndex((p) => p.slug === slugA);
-  const ib = projects.findIndex((p) => p.slug === slugB);
-  if (ia < 0 || ib < 0) return;
-  const tmp = layouts[ia]!;
-  layouts[ia] = layouts[ib]!;
-  layouts[ib] = tmp;
-}
-
-/** Re-bind clamp width after slot swaps so it matches `Project.size`. */
-function syncLayoutWidthToProjectSize(
-  projects: Project[],
-  layouts: PosterWallLayout[],
-  slug: string,
-) {
-  const i = projects.findIndex((p) => p.slug === slug);
-  if (i < 0) return;
-  const L = layouts[i];
-  if (!L) return;
-  L.width = widthForProjectSize(projects[i]!.size);
-}
-
-function nudgeLayoutPct(
-  projects: Project[],
-  layouts: PosterWallLayout[],
-  slug: string,
-  deltaLeftPct: number,
-  deltaTopPct: number,
-) {
-  const i = projects.findIndex((p) => p.slug === slug);
-  if (i < 0) return;
-  const L = layouts[i];
-  if (!L) return;
-  const sz = projects[i]!.size;
-  L.leftPct =
-    Math.round(clampWallLeftPct(L.leftPct + deltaLeftPct, sz) * 10) / 10;
-  L.topPct =
-    Math.round(
-      Math.min(81, Math.max(13.5, L.topPct + deltaTopPct)) * 10,
-    ) / 10;
 }
 
 /**
@@ -574,41 +524,6 @@ function layoutsForProjects(projects: Project[]): PosterWallLayout[] {
       fillI++;
     }
   }
-
-  /** Curator: Sofia ↔ Taste, Smirnoff ↔ Tears, then Tears ↔ Charlie (Charlie’s upper-left hero slot). */
-  swapWallLayoutsBySlug(
-    projects,
-    out,
-    "sofia-carson-hold-on-to-me",
-    "sabrina-carpenter-taste",
-  );
-  swapWallLayoutsBySlug(
-    projects,
-    out,
-    "smirnoff-live-louder-karol-g",
-    "sabrina-carpenter-tears",
-  );
-  swapWallLayoutsBySlug(
-    projects,
-    out,
-    "sabrina-carpenter-tears",
-    "charlie-puth-thats-not-how-this-works",
-  );
-
-  /** Re-sync widths for every slug touched by cross-swaps. */
-  syncLayoutWidthToProjectSize(projects, out, "sofia-carson-hold-on-to-me");
-  syncLayoutWidthToProjectSize(projects, out, "sabrina-carpenter-tears");
-  syncLayoutWidthToProjectSize(projects, out, "sabrina-carpenter-taste");
-  syncLayoutWidthToProjectSize(projects, out, "charlie-puth-thats-not-how-this-works");
-  syncLayoutWidthToProjectSize(projects, out, "smirnoff-live-louder-karol-g");
-
-  nudgeLayoutPct(
-    projects,
-    out,
-    "sabrina-carpenter-tears",
-    TEARS_NAME_CLEAR_NUDGE_LEFT_PCT,
-    TEARS_NAME_CLEAR_NUDGE_TOP_PCT,
-  );
 
   return out;
 }
