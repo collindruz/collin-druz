@@ -13,7 +13,6 @@ import {
 } from "@/components/BedroomPoster";
 import { CONTACT_EMAIL } from "@/lib/contact";
 import {
-  getYoutubeVideoId,
   type Project,
   type ProjectPriority,
   type ProjectSize,
@@ -560,14 +559,6 @@ type Props = {
   projects: Project[];
 };
 
-function posterPreloadUrl(p: Project): string | null {
-  const yt = p.youtubeId ?? getYoutubeVideoId(p.videoUrl);
-  if (yt) return `https://img.youtube.com/vi/${yt}/hqdefault.jpg`;
-  const th = p.thumbnail;
-  if (typeof th === "string") return th;
-  return th.src ?? null;
-}
-
 const PosterWallCell = memo(function PosterWallCell({
   project,
   wallLayout,
@@ -615,26 +606,6 @@ export function BedroomWall({ projects }: Props) {
   const mobileSheetOpenRef = useRef(false);
   const wallLayouts = getWallLayoutsCached(projects);
   const projectsByYearDesc = getProjectsByYearDescCached(projects);
-
-  useEffect(() => {
-    const links: HTMLLinkElement[] = [];
-    const seen = new Set<string>();
-    /** Keep initial preload small — many hq thumbnails compete for bandwidth. */
-    for (const p of projects.slice(0, 6)) {
-      const href = posterPreloadUrl(p);
-      if (!href || seen.has(href)) continue;
-      seen.add(href);
-      const link = document.createElement("link");
-      link.rel = "preload";
-      link.as = "image";
-      link.href = href;
-      document.head.appendChild(link);
-      links.push(link);
-    }
-    return () => {
-      for (const L of links) L.remove();
-    };
-  }, [projects]);
 
   useEffect(() => {
     mobileSheetOpenRef.current = mobileSheetOpen;

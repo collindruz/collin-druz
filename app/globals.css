@@ -38,63 +38,29 @@
  */
 .bedroom-plaster-wall {
   background-color: #e6e8e4;
+  /* Fewer layers than before — same palette, less repeating-gradient paint cost. */
   background-image:
     radial-gradient(
-      ellipse 55% 40% at 72% 38%,
-      rgba(255, 255, 255, 0.22) 0%,
+      ellipse 130% 88% at 14% 12%,
+      rgba(252, 252, 250, 0.52) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse 95% 72% at 86% 88%,
+      rgba(218, 220, 216, 0.58) 0%,
       transparent 50%
     ),
     radial-gradient(
-      ellipse 140% 90% at 12% 8%,
-      rgba(252, 252, 250, 0.55) 0%,
-      transparent 42%
-    ),
-    radial-gradient(
-      ellipse 100% 75% at 88% 92%,
-      rgba(218, 220, 216, 0.65) 0%,
-      transparent 48%
-    ),
-    radial-gradient(
-      ellipse 70% 55% at 48% 45%,
-      rgba(0, 0, 0, 0.025) 0%,
-      transparent 55%
-    ),
-    repeating-radial-gradient(
-      circle at 30% 40%,
-      transparent 0,
-      transparent 5px,
-      rgba(0, 0, 0, 0.022) 5px,
-      rgba(0, 0, 0, 0.022) 5.6px,
-      transparent 6.2px
-    ),
-    repeating-radial-gradient(
-      circle at 70% 60%,
-      transparent 0,
-      transparent 6px,
-      rgba(255, 255, 255, 0.05) 6px,
-      rgba(255, 255, 255, 0.05) 6.5px,
-      transparent 7.2px
+      ellipse 58% 44% at 70% 36%,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 52%
     ),
     repeating-linear-gradient(
-      14deg,
+      12deg,
       transparent,
-      transparent 22px,
-      rgba(0, 0, 0, 0.011) 22px,
-      rgba(0, 0, 0, 0.011) 23px
-    ),
-    repeating-linear-gradient(
-      -7deg,
-      transparent,
-      transparent 31px,
-      rgba(255, 255, 255, 0.045) 31px,
-      rgba(255, 255, 255, 0.045) 32px
-    ),
-    repeating-linear-gradient(
-      96deg,
-      transparent,
-      transparent 48px,
-      rgba(0, 0, 0, 0.006) 48px,
-      rgba(0, 0, 0, 0.006) 49px
+      transparent 28px,
+      rgba(0, 0, 0, 0.007) 28px,
+      rgba(0, 0, 0, 0.007) 29px
     ),
     linear-gradient(
       180deg,
@@ -103,7 +69,6 @@
       #e8eae6 72%,
       #e1e3df 100%
     );
-  background-size: auto, auto, auto, 9px 11px, 11px 9px, auto, auto, auto, auto;
 }
 
 /** Worn printed poster — slight fiber, not glossy. */

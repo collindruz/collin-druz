@@ -139,6 +139,7 @@ function BedroomPosterInner({
   pointerFine,
   onToggle,
 }: Props) {
+  const outerIoRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const openCardRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
@@ -161,6 +162,7 @@ function BedroomPosterInner({
   const [playbackDuration, setPlaybackDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [thumbHover, setThumbHover] = useState(false);
+  const [thumbReveal, setThumbReveal] = useState(false);
 
   const hoverLift =
     !isDragging &&
@@ -189,6 +191,60 @@ function BedroomPosterInner({
     () => posterStillSrc(project, embed, ytId),
     [embed, project, ytId],
   );
+
+  /** Off-screen posters skip thumbnail decode until near viewport, index hover, or open. */
+  useLayoutEffect(() => {
+    if (open || railHoverActive || thumbHover) {
+      setThumbReveal(true);
+      return;
+    }
+    if (thumbReveal) return;
+
+    const el = outerIoRef.current;
+    if (!el) return;
+
+    const margin = 280;
+    const r = el.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    if (
+      r.bottom > -margin &&
+      r.top < vh + margin &&
+      r.right > -margin &&
+      r.left < vw + margin
+    ) {
+      setThumbReveal(true);
+      return;
+    }
+
+    if (typeof IntersectionObserver === "undefined") {
+      setThumbReveal(true);
+      return;
+    }
+
+    let cancelled = false;
+    const ob = new IntersectionObserver(
+      (entries) => {
+        if (cancelled) return;
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setThumbReveal(true);
+            ob.disconnect();
+            return;
+          }
+        }
+      },
+      { root: null, rootMargin: "280px", threshold: 0 },
+    );
+    ob.observe(el);
+    return () => {
+      cancelled = true;
+      ob.disconnect();
+    };
+  }, [open, railHoverActive, thumbHover, thumbReveal, project.slug]);
+
+  const showClosedStill =
+    open || thumbReveal || railHoverActive || thumbHover;
 
   const detachWindowListeners = useRef(() => {});
 
@@ -817,18 +873,20 @@ function BedroomPosterInner({
     >
       <div className="bedroom-closed-thumb-crop">
         {/* eslint-disable-next-line @next/next/no-img-element -- native lazy load; avoid N× /_next/image optimizer calls on the wall */}
-        <img
-          src={stillUrl}
-          alt=""
-          width={480}
-          height={640}
-          className="bedroom-closed-thumb-crop__img absolute inset-0 h-full w-full opacity-100 saturate-[0.88] contrast-[0.94] [filter:saturate(0.88)_contrast(0.93)_brightness(1.02)]"
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
-          draggable={false}
-          onDragStart={(e) => e.preventDefault()}
-        />
+        {showClosedStill ? (
+          <img
+            src={stillUrl}
+            alt=""
+            width={480}
+            height={640}
+            className="bedroom-closed-thumb-crop__img absolute inset-0 h-full w-full opacity-100 saturate-[0.88] contrast-[0.94] [filter:saturate(0.88)_contrast(0.93)_brightness(1.02)]"
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+          />
+        ) : null}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.14] mix-blend-multiply"
           style={{
@@ -846,6 +904,7 @@ function BedroomPosterInner({
 
   return (
     <div
+      ref={outerIoRef}
       className="pointer-events-none absolute"
       style={{
         top: `${wallLayout.topPct}%`,
