@@ -241,13 +241,32 @@
   box-sizing: border-box;
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   margin: 0;
   padding: 6px 10px;
   line-height: 1;
   min-height: 0;
   background: linear-gradient(180deg, #1e2024 0%, #121418 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.bedroom-poster-title-strip__stack {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+}
+
+.bedroom-poster-title-strip__director {
+  margin: 0;
+  padding: 0;
+  font-size: 7px;
+  font-weight: 400;
+  letter-spacing: 0.055em;
+  line-height: 1.15;
+  color: rgba(196, 200, 206, 0.72);
 }
 
 .bedroom-timecode-rail {
@@ -488,13 +507,34 @@
   display: grid;
   grid-template-columns: 2.2rem minmax(0, 1fr);
   column-gap: 0.3rem;
-  align-items: baseline;
+  align-items: start;
   text-align: left;
   padding: 0.06rem 0.12rem;
   color: rgba(26, 29, 33, 0.58);
   transform-origin: right center;
   pointer-events: auto;
   transition: color 170ms ease, transform 170ms ease, letter-spacing 170ms ease;
+}
+
+.bedroom-project-rail__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.14rem;
+}
+
+.bedroom-project-rail__director {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 6.5px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  opacity: 0.52;
 }
 
 .bedroom-project-rail__year {
@@ -534,6 +574,10 @@
 .bedroom-project-rail__item.is-active .bedroom-project-rail__title {
   font-size: 9px;
   letter-spacing: 0.058em;
+}
+
+.bedroom-project-rail__item.is-active .bedroom-project-rail__director {
+  opacity: 0.62;
 }
 
 .analog-cursor-active,
@@ -733,13 +777,29 @@
     display: grid;
     grid-template-columns: 2.4rem minmax(0, 1fr);
     column-gap: 0.45rem;
-    align-items: baseline;
+    align-items: start;
     text-align: left;
     padding: 8px 6px;
     border-bottom: 1px solid rgba(38, 41, 46, 0.06);
     color: rgba(26, 29, 33, 0.72);
     transition: color 160ms ease;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .bedroom-mobile-sheet__copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .bedroom-mobile-sheet__director {
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    color: rgba(38, 41, 46, 0.48);
   }
 
   .bedroom-mobile-sheet__year {
@@ -760,6 +820,10 @@
 
   .bedroom-mobile-sheet__item.is-active .bedroom-mobile-sheet__title {
     font-weight: 600;
+  }
+
+  .bedroom-mobile-sheet__item.is-active .bedroom-mobile-sheet__director {
+    color: rgba(38, 41, 46, 0.56);
   }
 
   .bedroom-mobile-sheet__item:active {

@@ -788,10 +788,21 @@ export function BedroomWall({ projects }: Props) {
               onMouseLeave={() => setHoverSlug((cur) => (cur === project.slug ? null : cur))}
               onFocus={() => setHoverSlug(project.slug)}
               onBlur={() => setHoverSlug((cur) => (cur === project.slug ? null : cur))}
-              title={project.title}
+              title={
+                project.director
+                  ? `${project.title} · Dir. ${project.director}`
+                  : project.title
+              }
             >
               <span className="bedroom-project-rail__year">{project.year}</span>
-              <span className="bedroom-project-rail__title">{project.title}</span>
+              <span className="bedroom-project-rail__copy">
+                <span className="bedroom-project-rail__title">{project.title}</span>
+                {project.director ? (
+                  <span className="bedroom-project-rail__director">
+                    Dir. {project.director}
+                  </span>
+                ) : null}
+              </span>
             </button>
           ))}
         </div>
@@ -835,7 +846,14 @@ export function BedroomWall({ projects }: Props) {
                 onClick={() => pickFromSheet(project.slug)}
               >
                 <span className="bedroom-mobile-sheet__year">{project.year}</span>
-                <span className="bedroom-mobile-sheet__title">{project.title}</span>
+                <span className="bedroom-mobile-sheet__copy">
+                  <span className="bedroom-mobile-sheet__title">{project.title}</span>
+                  {project.director ? (
+                    <span className="bedroom-mobile-sheet__director">
+                      Dir. {project.director}
+                    </span>
+                  ) : null}
+                </span>
               </button>
             ))}
           </div>

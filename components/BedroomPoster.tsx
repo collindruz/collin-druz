@@ -861,7 +861,11 @@ function BedroomPosterInner({
           }
         }}
         aria-expanded={open}
-        aria-label={`${project.title}. Drag to reposition. Activate to ${open ? "close" : "open"}.`}
+        aria-label={
+          project.director
+            ? `${project.title}. Dir. ${project.director}. Drag to reposition. Activate to ${open ? "close" : "open"}.`
+            : `${project.title}. Drag to reposition. Activate to ${open ? "close" : "open"}.`
+        }
       >
         <div
           className={`bedroom-poster-slab origin-[50%_42%] ${open ? "bedroom-poster-slab--promoted" : ""} ${railHoverActive ? "bedroom-poster-slab--rail-hover" : ""} ${isDragging ? "select-none" : ""}`}
@@ -904,9 +908,16 @@ function BedroomPosterInner({
                 </span>
               </div>
               <div className="bedroom-poster-title-strip">
-                <p className="bedroom-poster-title-strip__text line-clamp-2">
-                  {project.title}
-                </p>
+                <div className="bedroom-poster-title-strip__stack">
+                  <p className="bedroom-poster-title-strip__text line-clamp-2">
+                    {project.title}
+                  </p>
+                  {project.director ? (
+                    <p className="bedroom-poster-title-strip__director line-clamp-2">
+                      Dir. {project.director}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </div>
           )}
