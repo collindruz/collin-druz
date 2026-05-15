@@ -4,7 +4,6 @@ import {
   memo,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -528,6 +527,35 @@ function layoutsForProjects(projects: Project[]): PosterWallLayout[] {
   return out;
 }
 
+const wallLayoutsCache = new WeakMap<Project[], PosterWallLayout[]>();
+const projectsByYearCache = new WeakMap<Project[], Project[]>();
+
+function getWallLayoutsCached(projectList: Project[]): PosterWallLayout[] {
+  const hit = wallLayoutsCache.get(projectList);
+  if (hit) return hit;
+  const next = layoutsForProjects(projectList);
+  wallLayoutsCache.set(projectList, next);
+  return next;
+}
+
+function getProjectsByYearDescCached(projectList: Project[]): Project[] {
+  const hit = projectsByYearCache.get(projectList);
+  if (hit) return hit;
+  const sorted = projectList
+    .map((project, idx) => ({ project, idx }))
+    .sort((a, b) => {
+      const ay = parseInt(a.project.year, 10);
+      const by = parseInt(b.project.year, 10);
+      const aYear = Number.isFinite(ay) ? ay : -Infinity;
+      const bYear = Number.isFinite(by) ? by : -Infinity;
+      if (bYear !== aYear) return bYear - aYear;
+      return a.idx - b.idx;
+    })
+    .map(({ project }) => project);
+  projectsByYearCache.set(projectList, sorted);
+  return sorted;
+}
+
 type Props = {
   projects: Project[];
 };
@@ -585,28 +613,14 @@ export function BedroomWall({ projects }: Props) {
   const mailHref = `mailto:${CONTACT_EMAIL}`;
   const stripRef = useRef<HTMLDivElement>(null);
   const mobileSheetOpenRef = useRef(false);
-  const wallLayouts = useMemo(
-    () => layoutsForProjects(projects),
-    [projects],
-  );
-  const projectsByYearDesc = useMemo(() => {
-    return projects
-      .map((project, idx) => ({ project, idx }))
-      .sort((a, b) => {
-        const ay = parseInt(a.project.year, 10);
-        const by = parseInt(b.project.year, 10);
-        const aYear = Number.isFinite(ay) ? ay : -Infinity;
-        const bYear = Number.isFinite(by) ? by : -Infinity;
-        if (bYear !== aYear) return bYear - aYear;
-        return a.idx - b.idx;
-      })
-      .map(({ project }) => project);
-  }, [projects]);
+  const wallLayouts = getWallLayoutsCached(projects);
+  const projectsByYearDesc = getProjectsByYearDescCached(projects);
 
   useEffect(() => {
     const links: HTMLLinkElement[] = [];
     const seen = new Set<string>();
-    for (const p of projects.slice(0, 12)) {
+    /** Keep initial preload small — many hq thumbnails compete for bandwidth. */
+    for (const p of projects.slice(0, 6)) {
       const href = posterPreloadUrl(p);
       if (!href || seen.has(href)) continue;
       seen.add(href);
@@ -701,16 +715,25 @@ export function BedroomWall({ projects }: Props) {
 
   useEffect(() => {
     if (!cursorEnabled) return;
+    let raf: number | null = null;
+    const pending = { x: 0, y: 0 };
+    let lastTarget: Element | null = null;
+
+    const flush = () => {
+      raf = null;
+      setCursorPos({ x: pending.x, y: pending.y });
+      setCursorOverImage(
+        lastTarget ? Boolean(lastTarget.closest("[data-wall-poster]")) : false,
+      );
+      setCursorVisible(true);
+    };
+
     const onMove = (e: PointerEvent) => {
       if (e.pointerType !== "mouse") return;
-      setCursorPos({ x: e.clientX, y: e.clientY });
-      setCursorVisible(true);
-      const target = e.target;
-      if (target instanceof Element) {
-        setCursorOverImage(Boolean(target.closest("[data-wall-poster]")));
-      } else {
-        setCursorOverImage(false);
-      }
+      pending.x = e.clientX;
+      pending.y = e.clientY;
+      lastTarget = e.target instanceof Element ? e.target : null;
+      if (raf === null) raf = requestAnimationFrame(flush);
     };
     const onDown = (e: PointerEvent) => {
       if (e.pointerType === "mouse") setCursorActive(true);
@@ -718,13 +741,14 @@ export function BedroomWall({ projects }: Props) {
     const onUp = () => setCursorActive(false);
     const onLeave = () => setCursorVisible(false);
 
-    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("blur", onLeave);
     document.addEventListener("mouseleave", onLeave);
 
     return () => {
+      if (raf !== null) cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);

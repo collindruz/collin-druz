@@ -167,7 +167,10 @@ function BedroomPosterInner({
     (railHoverActive ||
       (pointerFine && thumbHover && !open));
 
-  const embed = getVideoEmbed(project.videoUrl);
+  const embed = useMemo(
+    () => getVideoEmbed(project.videoUrl),
+    [project.videoUrl],
+  );
   const ytId =
     project.youtubeId ?? getYoutubeVideoId(project.videoUrl);
   const edgeClip = useMemo(() => tearClipPath(project.slug), [project.slug]);

@@ -1,2 +1,2 @@
 /** SWAP: your working email */
-export const CONTACT_EMAIL = "collindruz@gmail.com";
+export const CONTACT_EMAIL = "collin@freenjoy.com";

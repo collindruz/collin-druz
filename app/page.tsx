@@ -1,6 +1,6 @@
 import { BedroomWall } from "@/components/BedroomWall";
-import { getProjectsForArchive } from "@/lib/projects";
+import { projects } from "@/lib/projects";
 
 export default function Page() {
-  return <BedroomWall projects={getProjectsForArchive()} />;
+  return <BedroomWall projects={projects} />;
 }

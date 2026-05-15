@@ -1057,9 +1057,9 @@ export function getProjectBySlug(slug: string): Project | undefined {
   return projects.find((p) => p.slug === slug);
 }
 
-/** Same order as `projects` in this file (stable list order). */
+/** Same order as `projects` in this file (stable list reference — do not mutate). */
 export function getProjectsForArchive(): Project[] {
-  return [...projects];
+  return projects;
 }
 
 export type VideoEmbed =
