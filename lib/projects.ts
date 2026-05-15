@@ -190,7 +190,7 @@ export const projects: Project[] = [
     description: "Man’s Best Friend era — dry-eyed hook.",
     featured: false,
     priority: "standard",
-    size: "md",
+    size: "lg",
   },
   {
     slug: "doja-cat-stranger",

@@ -114,6 +114,10 @@ const HERO_OPTIONAL_SLOTS: Array<{ left: number; top: number }> = [
   { left: 76.5, top: 22.6 },
 ];
 
+/** After Tears ↔ Charlie: shift Tears down/right so slab clears “Collin Druz” (top-left). */
+const TEARS_NAME_CLEAR_NUDGE_TOP_PCT = 5.8;
+const TEARS_NAME_CLEAR_NUDGE_LEFT_PCT = 3.4;
+
 /** Curated importance: recency + priority + featured + size (for vertical gradient). */
 function importance(idx: number, p: Project): number {
   let v = recencyScore(idx, p);
@@ -307,6 +311,26 @@ function syncLayoutWidthToProjectSize(
   const L = layouts[i];
   if (!L) return;
   L.width = widthForProjectSize(projects[i]!.size);
+}
+
+function nudgeLayoutPct(
+  projects: Project[],
+  layouts: PosterWallLayout[],
+  slug: string,
+  deltaLeftPct: number,
+  deltaTopPct: number,
+) {
+  const i = projects.findIndex((p) => p.slug === slug);
+  if (i < 0) return;
+  const L = layouts[i];
+  if (!L) return;
+  const sz = projects[i]!.size;
+  L.leftPct =
+    Math.round(clampWallLeftPct(L.leftPct + deltaLeftPct, sz) * 10) / 10;
+  L.topPct =
+    Math.round(
+      Math.min(81, Math.max(13.5, L.topPct + deltaTopPct)) * 10,
+    ) / 10;
 }
 
 /**
@@ -551,7 +575,7 @@ function layoutsForProjects(projects: Project[]): PosterWallLayout[] {
     }
   }
 
-  /** Curator swaps: Sofia ↔ Taste hero slot, Smirnoff ↔ Tears, then Taste ↔ Charlie (top-left under name). */
+  /** Curator: Sofia ↔ Taste, Smirnoff ↔ Tears, then Tears ↔ Charlie (Charlie’s upper-left hero slot). */
   swapWallLayoutsBySlug(
     projects,
     out,
@@ -567,7 +591,7 @@ function layoutsForProjects(projects: Project[]): PosterWallLayout[] {
   swapWallLayoutsBySlug(
     projects,
     out,
-    "sabrina-carpenter-taste",
+    "sabrina-carpenter-tears",
     "charlie-puth-thats-not-how-this-works",
   );
 
@@ -577,6 +601,14 @@ function layoutsForProjects(projects: Project[]): PosterWallLayout[] {
   syncLayoutWidthToProjectSize(projects, out, "sabrina-carpenter-taste");
   syncLayoutWidthToProjectSize(projects, out, "charlie-puth-thats-not-how-this-works");
   syncLayoutWidthToProjectSize(projects, out, "smirnoff-live-louder-karol-g");
+
+  nudgeLayoutPct(
+    projects,
+    out,
+    "sabrina-carpenter-tears",
+    TEARS_NAME_CLEAR_NUDGE_LEFT_PCT,
+    TEARS_NAME_CLEAR_NUDGE_TOP_PCT,
+  );
 
   return out;
 }
