@@ -61,7 +61,8 @@ const HALF_WIDTH_VW: Record<ProjectSize, number> = {
   sm: 7.05 / 2,
 };
 
-const WALL_H_INSET_PCT = 5;
+/** Clear band around fixed UI (name, email, index) — % of viewport. */
+const UI_MARGIN_PCT = 5;
 
 /**
  * Match desktop index rail: `right: 2.2%`, panel `width: min(22vw, 290px)` — vw
@@ -69,7 +70,6 @@ const WALL_H_INSET_PCT = 5;
  */
 const RAIL_RIGHT_MARGIN_PCT = 2.2;
 const RAIL_PANEL_WIDTH_VW = 22;
-const RAIL_MURAL_GAP_PCT = 1.1;
 
 const WALL_HAND_SLACK_PCT = 2.6;
 
@@ -81,16 +81,23 @@ const WALL_COMPACT_THUMB_SLUGS = new Set<string>([
 /** Newest-seven boost skipped — still on the wall, reads as catalogue not hero. */
 const WALL_PROMINENCE_SKIP_SLUGS = new Set<string>(["doja-cat-gorgeous"]);
 
-/** Top-left logo lockup — tight; posters may graze the outer margin. */
-const NAME_PLATE_MAX_RIGHT_PCT = 14;
-const NAME_PLATE_MAX_BOTTOM_PCT = 8.5;
+/** Name plate ~top-left + `UI_MARGIN_PCT` cushion (axis-aligned, top = 0). */
+const NAME_EXCL_RIGHT = 17 + UI_MARGIN_PCT;
+const NAME_EXCL_BOTTOM = 9 + UI_MARGIN_PCT;
 
-/** Bottom-left contact block (~left 4% / bottom 4%); keep slabs from sitting on the copy. */
-const EMAIL_PLATE_LEFT_CAP_PCT = 44;
-const EMAIL_PLATE_TOP_FROM_TOP_PCT = 72;
+/** Bottom-left email block: narrow band, only lower strip + `UI_MARGIN_PCT`. */
+const EMAIL_EXCL_RIGHT = 24 + UI_MARGIN_PCT;
+/** From top: 100 − bottom inset − copy block − margins (keeps rest of wall open). */
+const EMAIL_EXCL_TOP =
+  100 - UI_MARGIN_PCT - 4 - 11 - UI_MARGIN_PCT;
 
 function railLeftEdgePct(): number {
   return 100 - RAIL_RIGHT_MARGIN_PCT - RAIL_PANEL_WIDTH_VW;
+}
+
+/** Left edge of index column minus the 5% comfort band — mural usable right bound. */
+function muralContentRightPct(): number {
+  return railLeftEdgePct() - UI_MARGIN_PCT;
 }
 
 function effectiveHalfWidthPct(size: ProjectSize): number {
@@ -99,16 +106,16 @@ function effectiveHalfWidthPct(size: ProjectSize): number {
 
 function clampWallLeftPct(leftPct: number, size: ProjectSize): number {
   const hw = effectiveHalfWidthPct(size);
-  const minC = WALL_H_INSET_PCT + hw;
-  const maxC = railLeftEdgePct() - RAIL_MURAL_GAP_PCT - hw;
+  const minC = UI_MARGIN_PCT + hw;
+  const maxC = muralContentRightPct() - hw;
   return Math.min(maxC, Math.max(minC, leftPct));
 }
 
 /** Horizontal center of the mural band (posters only), per footprint size. */
 function wallContentMidpointPct(size: ProjectSize): number {
   const hw = effectiveHalfWidthPct(size);
-  const minC = WALL_H_INSET_PCT + hw;
-  const maxC = railLeftEdgePct() - RAIL_MURAL_GAP_PCT - hw;
+  const minC = UI_MARGIN_PCT + hw;
+  const maxC = muralContentRightPct() - hw;
   return (minC + maxC) / 2;
 }
 
@@ -147,9 +154,9 @@ function overlapsNamePlate(
 ): boolean {
   const box = posterBoundsPct(leftPct, topPct, size);
   return (
-    box.l < NAME_PLATE_MAX_RIGHT_PCT &&
+    box.l < NAME_EXCL_RIGHT &&
     box.r > 0.5 &&
-    box.t < NAME_PLATE_MAX_BOTTOM_PCT &&
+    box.t < NAME_EXCL_BOTTOM &&
     box.b > 0.5
   );
 }
@@ -160,11 +167,20 @@ function overlapsEmailPlate(
   size: ProjectSize,
 ): boolean {
   const box = posterBoundsPct(leftPct, topPct, size);
-  if (box.l >= EMAIL_PLATE_LEFT_CAP_PCT) return false;
-  return box.b > EMAIL_PLATE_TOP_FROM_TOP_PCT;
+  if (box.l >= EMAIL_EXCL_RIGHT) return false;
+  return box.b > EMAIL_EXCL_TOP;
 }
 
-/** Clear name / email UI + neighbor separation — light nudges, not a dead zone. */
+function overlapsIndexBand(
+  leftPct: number,
+  topPct: number,
+  size: ProjectSize,
+): boolean {
+  const box = posterBoundsPct(leftPct, topPct, size);
+  return box.r > muralContentRightPct();
+}
+
+/** Clear 5%-margin UI + neighbor separation. */
 function finalizeWallPosition(
   leftPct: number,
   topPct: number,
@@ -183,17 +199,21 @@ function finalizeWallPosition(
     const sepOk = minSepOk(L, T, size, placed, sepMul, selfProminent);
     const nameHit = overlapsNamePlate(L, T, size);
     const emailHit = overlapsEmailPlate(L, T, size);
-    if (sepOk && !nameHit && !emailHit) break;
+    const indexHit = overlapsIndexBand(L, T, size);
+    if (sepOk && !nameHit && !emailHit && !indexHit) break;
 
     if (!sepOk) {
       L += (hash01(slug, tries + 180) - 0.5) * 2.9;
       T += (hash01(slug, tries + 241) - 0.5) * 2.1;
+    } else if (indexHit) {
+      L -= 2.2;
+      T += (hash01(slug, tries + 90) - 0.5) * 1.2;
     } else if (emailHit) {
-      T -= 1.9;
-      L += 1.1;
+      T -= 1.6;
+      L += 1.3;
     } else if (nameHit) {
-      L += 1.7;
-      T += 0.75;
+      L += 1.6;
+      T += 0.7;
     }
     L = clampWallLeftPct(L, size);
     T = Math.max(topMin, Math.min(topMax, T));
@@ -389,8 +409,8 @@ function generateCandidates(extra: number): Array<{ left: number; top: number }>
   const golden = Math.PI * (3 - Math.sqrt(5));
   const total = Math.min(240, extra);
   const mid = wallContentMidpointPct("md");
-  const spanLo = WALL_H_INSET_PCT + 9;
-  const spanHi = railLeftEdgePct() - RAIL_MURAL_GAP_PCT - 9;
+  const spanLo = UI_MARGIN_PCT + 4;
+  const spanHi = muralContentRightPct() - 4;
 
   for (let i = 0; i < total; i++) {
     const z = i / Math.max(total - 1, 1);
@@ -400,7 +420,7 @@ function generateCandidates(extra: number): Array<{ left: number; top: number }>
     let top = 34 + Math.sin(ang) * r * 0.72 + z * z * 14;
 
     left = left * 0.62 + (spanLo + z * (spanHi - spanLo)) * 0.38;
-    top = Math.min(82, top * 0.55 + (32 + Math.pow(z, 0.85) * 44) * 0.45);
+    top = Math.min(93, top * 0.55 + (26 + Math.pow(z, 0.82) * 52) * 0.45);
 
     if (i % 15 === 2) left = spanLo + (i % 6) * 0.55;
     else if (i % 15 === 10) left = spanHi - (i % 5) * 0.45;
@@ -656,7 +676,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       let top = c.top + (hash01(it.p.slug, 31 + fillI) - 0.5) * 6.2;
 
       left = clampWallLeftPct(left, it.layoutSize);
-      top = Math.max(13.5, Math.min(81, top));
+      top = Math.max(13.5, Math.min(92, top));
 
       const mul = sepMulForTop(top) * 0.98 + zoneMul * 0.02;
 
@@ -670,7 +690,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
           isProm,
           it.p.slug,
           13.5,
-          81,
+          92,
         );
         left = fin.left;
         top = fin.top;
@@ -709,7 +729,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
         let left = idealLeft + Math.cos(ang) * rad * 0.82;
         let top = idealTop + Math.sin(ang) * rad * 0.58;
         left = clampWallLeftPct(left, it.layoutSize);
-        top = Math.max(13.5, Math.min(81, top));
+        top = Math.max(13.5, Math.min(92, top));
         const mul = sepMulForTop(top);
         if (minSepOk(left, top, it.layoutSize, placed, mul, isProm)) {
           const fin = finalizeWallPosition(
@@ -721,7 +741,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
             isProm,
             it.p.slug,
             13.5,
-            81,
+            92,
           );
           left = fin.left;
           top = fin.top;
@@ -760,7 +780,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
         left += (hash01(it.p.slug, 60 + s) - 0.5) * 4.5;
         top += (hash01(it.p.slug, 90 + s) - 0.5) * 4.5;
         left = clampWallLeftPct(left, it.layoutSize);
-        top = Math.max(13.5, Math.min(81, top));
+        top = Math.max(13.5, Math.min(92, top));
         if (minSepOk(left, top, it.layoutSize, placed, mul, isProm)) break;
       }
       const finLast = finalizeWallPosition(
@@ -772,7 +792,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
         isProm,
         it.p.slug,
         13.5,
-        81,
+        92,
       );
       left = finLast.left;
       top = finLast.top;
