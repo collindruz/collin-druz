@@ -20,21 +20,21 @@ export type PosterWallLayout = {
 function widthForProjectSize(size: ProjectSize): string {
   switch (size) {
     case "xl":
-      return "clamp(88px, 13.2vw, 238px)";
+      return "clamp(81px, 12.2vw, 220px)";
     case "lg":
-      return "clamp(80px, 11.2vw, 205px)";
+      return "clamp(74px, 10.35vw, 190px)";
     case "md":
-      return "clamp(74px, 9.4vw, 178px)";
+      return "clamp(68px, 8.7vw, 164px)";
     case "sm":
-      return "clamp(62px, 7.6vw, 148px)";
+      return "clamp(57px, 7.05vw, 137px)";
   }
 }
 
 const SIZE_SEP_PCT: Record<ProjectSize, number> = {
-  xl: 13.5,
-  lg: 12,
-  md: 9.2,
-  sm: 7.4,
+  xl: 12.7,
+  lg: 11.25,
+  md: 8.65,
+  sm: 6.95,
 };
 
 function sepMin(a: ProjectSize, b: ProjectSize): number {
@@ -55,15 +55,27 @@ const PR_RANK: Record<ProjectPriority, number> = {
 };
 
 const HALF_WIDTH_VW: Record<ProjectSize, number> = {
-  xl: 13.2 / 2,
-  lg: 11.2 / 2,
-  md: 9.4 / 2,
-  sm: 7.6 / 2,
+  xl: 12.2 / 2,
+  lg: 10.35 / 2,
+  md: 8.7 / 2,
+  sm: 7.05 / 2,
 };
 
 const WALL_H_INSET_PCT = 5;
-const WALL_RIGHT_LABEL_GUTTER_PCT = 14;
+
+/**
+ * Match desktop index rail: `right: 2.2%`, panel `width: min(22vw, 290px)` — vw
+ * term used here (cap omitted for static layout).
+ */
+const RAIL_RIGHT_MARGIN_PCT = 2.2;
+const RAIL_PANEL_WIDTH_VW = 22;
+const RAIL_MURAL_GAP_PCT = 1.1;
+
 const WALL_HAND_SLACK_PCT = 2.6;
+
+function railLeftEdgePct(): number {
+  return 100 - RAIL_RIGHT_MARGIN_PCT - RAIL_PANEL_WIDTH_VW;
+}
 
 function effectiveHalfWidthPct(size: ProjectSize): number {
   return HALF_WIDTH_VW[size] + WALL_HAND_SLACK_PCT;
@@ -72,13 +84,29 @@ function effectiveHalfWidthPct(size: ProjectSize): number {
 function clampWallLeftPct(leftPct: number, size: ProjectSize): number {
   const hw = effectiveHalfWidthPct(size);
   const minC = WALL_H_INSET_PCT + hw;
-  const maxC = 100 - WALL_H_INSET_PCT - WALL_RIGHT_LABEL_GUTTER_PCT - hw;
+  const maxC = railLeftEdgePct() - RAIL_MURAL_GAP_PCT - hw;
   return Math.min(maxC, Math.max(minC, leftPct));
 }
 
+/** Horizontal center of the mural band (posters only), per footprint size. */
+function wallContentMidpointPct(size: ProjectSize): number {
+  const hw = effectiveHalfWidthPct(size);
+  const minC = WALL_H_INSET_PCT + hw;
+  const maxC = railLeftEdgePct() - RAIL_MURAL_GAP_PCT - hw;
+  return (minC + maxC) / 2;
+}
+
+/** Hero / candidate coords were authored against viewport center 50%. */
+const LAYOUT_LEGACY_VIEWPORT_CENTER = 50;
+
+function shiftFromLegacyViewportCenter(leftPct: number): number {
+  return leftPct + (wallContentMidpointPct("md") - LAYOUT_LEGACY_VIEWPORT_CENTER);
+}
+
 function nudgeLeftClusterTowardCenter(leftPct: number): number {
-  if (leftPct >= 40) return leftPct;
-  return leftPct + (40 - leftPct) * 0.48;
+  const target = wallContentMidpointPct("md");
+  if (leftPct >= target) return leftPct;
+  return leftPct + (target - leftPct) * 0.48;
 }
 
 const MANDATORY_HERO_SLUGS = [
@@ -266,19 +294,22 @@ function generateCandidates(extra: number): Array<{ left: number; top: number }>
   const out: Array<{ left: number; top: number }> = [];
   const golden = Math.PI * (3 - Math.sqrt(5));
   const total = Math.min(240, extra);
+  const mid = wallContentMidpointPct("md");
+  const spanLo = WALL_H_INSET_PCT + 9;
+  const spanHi = railLeftEdgePct() - RAIL_MURAL_GAP_PCT - 9;
 
   for (let i = 0; i < total; i++) {
     const z = i / Math.max(total - 1, 1);
     const r = 3 + Math.sqrt(i + 1) * 5.4;
     const ang = i * golden + 0.55;
-    let left = 50 + Math.cos(ang) * r * 0.9;
+    let left = mid + Math.cos(ang) * r * 0.9;
     let top = 34 + Math.sin(ang) * r * 0.72 + z * z * 14;
 
-    left = left * 0.62 + (22 + z * 56) * 0.38;
+    left = left * 0.62 + (spanLo + z * (spanHi - spanLo)) * 0.38;
     top = Math.min(82, top * 0.55 + (32 + Math.pow(z, 0.85) * 44) * 0.45);
 
-    if (i % 15 === 2) left = 8 + (i % 6) * 0.55;
-    else if (i % 15 === 10) left = 92 + (i % 5) * 0.45;
+    if (i % 15 === 2) left = spanLo + (i % 6) * 0.55;
+    else if (i % 15 === 10) left = spanHi - (i % 5) * 0.45;
 
     if (i % 17 === 5) top = 14 + (i % 4);
     else if (i % 17 === 12) top = 78 + (i % 4) * 0.35;
@@ -372,11 +403,11 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     let baseLeft: number;
     let baseTop: number;
     if (anchorBase) {
-      baseLeft = anchorBase.left;
+      baseLeft = shiftFromLegacyViewportCenter(anchorBase.left);
       baseTop = anchorBase.top;
     } else {
       const ex = HERO_OPTIONAL_SLOTS[optSlot++] ?? { left: 50, top: 22.5 };
-      baseLeft = ex.left;
+      baseLeft = shiftFromLegacyViewportCenter(ex.left);
       baseTop = ex.top;
     }
 
@@ -482,10 +513,11 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       downNudge +
       vBreak;
     const spread = 16 + (1 - impN) * 34;
+    const contentMidX = wallContentMidpointPct(it.layoutSize);
     let idealLeft =
-      50 +
+      contentMidX +
       (hash01(it.p.slug, 10) - 0.5) * spread * 0.88 -
-      (impN - 0.4) * 14 +
+      (impN - 0.4) * 12 +
       (fillI % 5) * 0.6 +
       promJitter;
     idealLeft = nudgeLeftClusterTowardCenter(idealLeft);

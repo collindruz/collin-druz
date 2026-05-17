@@ -229,7 +229,7 @@ export function BedroomWall({
           {CONTACT_EMAIL}
         </a>
         <p className="mt-2 max-w-[14rem] text-[9px] leading-snug tracking-[0.05em] text-charcoal/20 md:text-[10px] md:tracking-[0.055em]">
-          Drag posters to move them. Click or press Enter to open and play.
+          interact. play. create.
         </p>
       </div>
 
