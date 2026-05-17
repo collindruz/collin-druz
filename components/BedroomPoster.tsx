@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { StaticImageData } from "next/image";
 import type { YTInstance } from "@/lib/ytTypes";
+import type { PosterWallLayout } from "@/lib/bedroomWallLayout";
 import {
   getVideoEmbed,
   getVimeoVideoId,
@@ -69,24 +70,13 @@ function tearClipPath(slug: string): string {
   )`;
 }
 
-export type PosterWallLayout = {
-  topPct: number;
-  leftPct: number;
-  /** CSS width, e.g. clamp(140px, 12vw, 260px) */
-  width: string;
-  zIndex: number;
-  rotateDeg: number;
-  /** Hand-placement jitter (px), applied with grid centering. */
-  offsetXPx: number;
-  offsetYPx: number;
-};
-
 type Props = {
   project: Project;
   wallLayout: PosterWallLayout;
   open: boolean;
-  /** Index-rail highlight for this slug (keyboard/mouse on rail only — not poster hover). */
   railHoverActive: boolean;
+  /** Fine pointer (e.g. desktop): poster hover raises z so the slab reads above neighbors. */
+  pointerFine: boolean;
   onToggle: () => void;
 };
 
@@ -135,6 +125,7 @@ function BedroomPosterInner({
   wallLayout,
   open,
   railHoverActive,
+  pointerFine,
   onToggle,
 }: Props) {
   const outerIoRef = useRef<HTMLDivElement>(null);
@@ -159,10 +150,13 @@ function BedroomPosterInner({
   const [playbackTime, setPlaybackTime] = useState(0);
   const [playbackDuration, setPlaybackDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
+  const [thumbHover, setThumbHover] = useState(false);
   const [thumbReveal, setThumbReveal] = useState(false);
 
-  /** Stack when index rail highlights this poster (not pointer hover on the photo). */
-  const hoverStack = !isDragging && railHoverActive;
+  /** Rail highlight or desktop pointer hover (dragging uses higher z). */
+  const hoverStack =
+    !isDragging &&
+    (railHoverActive || (pointerFine && thumbHover && !open));
 
   const embed = useMemo(
     () => getVideoEmbed(project.videoUrl),
@@ -187,9 +181,9 @@ function BedroomPosterInner({
     [embed, project, ytId],
   );
 
-  /** Off-screen posters skip thumbnail decode until near viewport, index rail, or open. */
+  /** Off-screen posters skip thumbnail decode until near viewport, rail, pointer hover, or open. */
   useLayoutEffect(() => {
-    if (open || railHoverActive) {
+    if (open || railHoverActive || thumbHover) {
       setThumbReveal(true);
       return;
     }
@@ -236,10 +230,10 @@ function BedroomPosterInner({
       cancelled = true;
       ob.disconnect();
     };
-  }, [open, railHoverActive, thumbReveal, project.slug]);
+  }, [open, railHoverActive, thumbHover, thumbReveal, project.slug]);
 
   const showClosedStill =
-    open || thumbReveal || railHoverActive;
+    open || thumbReveal || railHoverActive || thumbHover;
 
   const detachWindowListeners = useRef(() => {});
 
@@ -926,6 +920,10 @@ function BedroomPosterInner({
             onToggle();
           }
         }}
+        onMouseEnter={() => {
+          if (pointerFine) setThumbHover(true);
+        }}
+        onMouseLeave={() => setThumbHover(false)}
         aria-expanded={open}
         aria-label={
           project.director

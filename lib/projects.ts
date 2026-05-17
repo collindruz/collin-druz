@@ -37,7 +37,7 @@ export type Project = {
 
 /**
  * Curated wall + archive from collindruz.com and additional reels (Apr 2026).
- * Literal array order is stable; BedroomWall assigns slots by priority/size.
+ * Literal array order is stable; `lib/bedroomWallLayout` boosts the newest ~7 for hero band + scale.
  */
 export const projects: Project[] = [
   {

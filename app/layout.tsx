@@ -20,6 +20,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={sans.variable}>
+      <head>
+        <link rel="preconnect" href="https://img.youtube.com" />
+        <link rel="preconnect" href="https://www.youtube.com" />
+      </head>
       <body className="h-full min-h-0 overflow-hidden">{children}</body>
     </html>
   );
