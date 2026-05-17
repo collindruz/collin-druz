@@ -280,10 +280,16 @@ function countLocalNeighbors(
     ? LOCAL_HOTSPOT_R_CENTER
     : LOCAL_HOTSPOT_R;
   const r2 = r * r;
+  const center = inCenterTerritory(left, ex);
   let n = 0;
   for (const q of placed) {
-    const dx = (left - q.left) * 0.9;
-    const dy = top - q.top;
+    let dx = (left - q.left) * 0.9;
+    let dy = top - q.top;
+    /** Center only: vertical proximity counts “closer” → fewer tolerated stacks. */
+    if (center) {
+      dx *= 1.04;
+      dy *= 0.74;
+    }
     if (dx * dx + dy * dy < r2) n += 1;
   }
   return n;
@@ -336,7 +342,7 @@ function minSepOk(
     let need = sepMin(size, q.size) * sepMul;
     need *= roleSepMul(role, q.role);
     const cQ = inCenterTerritory(q.left, ex);
-    if (cNew && cQ) need *= 1.26;
+    if (cNew && cQ) need *= 1.3;
     else if (cNew || cQ) need *= 1.11;
     const dx = (left - q.left) * 0.885;
     const dy = top - q.top;
@@ -372,10 +378,10 @@ function cellCenter(
   const cw = (ex.leftMax - ex.leftMin) / GRID_COLS;
   const ch = (ex.topMax - ex.topMin) / GRID_ROWS;
   let left = ex.leftMin + (col + 0.5) * cw;
-  if (col === 1) left -= cw * 0.16;
-  if (col === 3) left += cw * 0.16;
+  if (col === 1) left -= cw * 0.185;
+  if (col === 3) left += cw * 0.185;
   if (col === 2) {
-    left += (hash01(slug, 901) - 0.5) * cw * 0.62;
+    left += (hash01(slug, 901) - 0.5) * cw * 0.74;
   }
   const top = ex.topMin + (row + 0.5) * ch;
   return { left, top };
@@ -392,10 +398,12 @@ function gridJitterPct(
   const j = centerHeavy
     ? 2.25 + hash01(slug, salt + 11) * 2.35
     : 1.5 + hash01(slug, salt + 11) * 1.5;
-  const vertBoost = centerHeavy ? 1.18 : 1;
+  /** Center: wider horizontal (~4–8% effective fan), calmer vertical → less middle stacking. */
+  const jx = centerHeavy ? j * 1.4 : j;
+  const jy = centerHeavy ? j * 0.78 : j;
   return {
-    dx: (hash01(slug, salt) - 0.5) * 2 * j,
-    dy: (hash01(slug, salt + 7) - 0.5) * 2 * j * vertBoost,
+    dx: (hash01(slug, salt) - 0.5) * 2 * jx,
+    dy: (hash01(slug, salt + 7) - 0.5) * 2 * jy,
   };
 }
 
@@ -439,22 +447,20 @@ function relaxPlacement(
 ): { left: number; top: number } {
   let L = left;
   let T = top;
-  const midX = (ex.leftMin + ex.leftMax) / 2;
-  const midY = (ex.topMin + ex.topMax) / 2;
+  /** No drift toward board midpoint — search is uncorrelated noise around the grid seed only. */
+  const seedInCenter = inCenterTerritory(left, ex);
   for (let k = 0; k < 72; k++) {
     if (placementOk(L, T, size, placed, role, sepMul, ex)) break;
     const s = 0.42 + k * 0.038;
-    if (inCenterTerritory(L, ex)) {
-      L += (L - midX) * (0.24 + k * 0.008);
-      T += (T - midY) * (0.11 + k * 0.004);
-    }
+    const hMul = seedInCenter ? 3.22 : 2.95;
+    const vMul = seedInCenter ? 2.02 : 2.55;
     L =
       left +
-      (hash01(slug, k + 50) - 0.5) * 2 * s * 2.95 +
+      (hash01(slug, k + 50) - 0.5) * 2 * s * hMul +
       (hash01(slug, k + 80) - 0.5) * 0.95;
     T =
       top +
-      (hash01(slug, k + 110) - 0.5) * 2 * s * 2.55 +
+      (hash01(slug, k + 110) - 0.5) * 2 * s * vMul +
       (hash01(slug, k + 140) - 0.5) * 0.82;
     L = clampWallLeftPct(L, size, role);
     T = Math.max(ex.topMin + 1, Math.min(ex.topMax - 1, T));
@@ -781,14 +787,14 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     const sepMul =
       m.role === "headline"
         ? inC
-          ? 1.28
+          ? 1.3
           : 1.12
         : m.role === "support"
           ? inC
-            ? 1.12
+            ? 1.14
             : 1.03
           : inC
-            ? 1.04
+            ? 1.05
             : 0.97;
 
     const fin = relaxPlacement(
