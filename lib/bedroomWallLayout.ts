@@ -447,6 +447,26 @@ export function getWallDebugOverlayData(
   return { territory, grid: { verticalsPct, horizontalsPct }, posters };
 }
 
+/** Pairwise exchanges: only these slugs trade their computed slot layout (position, size, z, tilt, hand offsets). */
+const WALL_LAYOUT_SLUG_SWAPS: [string, string][] = [
+  ["sabrina-carpenter-tears", "charlie-puth-thats-not-how-this-works"],
+  ["burger-king-whopper-by-you", "doja-cat-jealous-type"],
+];
+
+function applyWallLayoutSlugSwaps(
+  projects: Project[],
+  layouts: PosterWallLayout[],
+): void {
+  for (const [slugA, slugB] of WALL_LAYOUT_SLUG_SWAPS) {
+    const ia = projects.findIndex((p) => p.slug === slugA);
+    const ib = projects.findIndex((p) => p.slug === slugB);
+    if (ia < 0 || ib < 0) continue;
+    const tmp = layouts[ia]!;
+    layouts[ia] = layouts[ib]!;
+    layouts[ib] = tmp;
+  }
+}
+
 export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
   const n = projects.length;
   if (n === 0) return [];
@@ -491,5 +511,6 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     }
   }
 
+  applyWallLayoutSlugSwaps(projects, out);
   return out;
 }

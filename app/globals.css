@@ -167,8 +167,8 @@
 .bedroom-open-player-card {
   transform: none;
   box-sizing: border-box;
-  width: min(88vw, 520px);
-  max-width: min(88vw, 520px);
+  width: min(82vw, 440px);
+  max-width: min(82vw, 440px);
   margin-left: auto;
   margin-right: auto;
   transition: width 440ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -177,21 +177,21 @@
 
 @media (min-width: 768px) {
   .bedroom-open-player-card {
-    width: clamp(520px, 46vw, 760px);
-    max-width: clamp(520px, 46vw, 760px);
+    width: clamp(400px, 36vw, 600px);
+    max-width: clamp(400px, 36vw, 600px);
   }
 }
 
 /** Cap open media height so promoted playback stays “on the wall,” not fullscreen. */
 .bedroom-open-player-card .bedroom-yt-embed-root,
 .bedroom-open-player-card .bedroom-open-media-play {
-  max-height: 60vh;
+  max-height: 52vh;
 }
 
 @media (min-width: 768px) {
   .bedroom-open-player-card .bedroom-yt-embed-root,
   .bedroom-open-player-card .bedroom-open-media-play {
-    max-height: 65vh;
+    max-height: 56vh;
   }
 }
 

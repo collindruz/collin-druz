@@ -195,8 +195,8 @@ function BedroomPosterInner({
     !isDragging &&
     (railHoverActive || (pointerFine && thumbHover && !open));
 
-  const openScale = narrowViewport ? 1.38 : 1.78;
-  const openLiftPx = open ? (narrowViewport ? -18 : -30) : 0;
+  const openScale = narrowViewport ? 1.22 : 1.48;
+  const openLiftPx = open ? (narrowViewport ? -8 : -14) : 0;
   const passiveRecessed = wallDimmed && !open && !isDragging;
 
   /** Off-screen posters skip thumbnail decode until near viewport, rail, pointer hover, or open. */
