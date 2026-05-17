@@ -624,7 +624,7 @@
   background: rgba(248, 249, 246, 0.95);
 }
 
-/** Slightly larger move reticle over draggable posters — no continuous animation. */
+/** Larger reticle over `[data-wall-poster]` — pure cursor chrome; no poster React state. */
 .bedroom-analog-cursor.is-over-image .bedroom-analog-cursor__cross--v {
   top: -10px;
   height: 20px;
