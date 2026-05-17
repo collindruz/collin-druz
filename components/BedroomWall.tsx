@@ -114,8 +114,6 @@ const HERO_OPTIONAL_SLOTS: Array<{ left: number; top: number }> = [
   { left: 76.5, top: 22.6 },
 ];
 
-
-
 /** Curated importance: recency + priority + featured + size (for vertical gradient). */
 function importance(idx: number, p: Project): number {
   let v = recencyScore(idx, p);
@@ -267,15 +265,20 @@ function pickHeroes(metas: WallMeta[]): WallMeta[] {
     if (m) keys.push(m);
   }
   const used = new Set(keys.map((k) => k.idx));
+  const optionalMax = Math.min(2, Math.max(0, 5 - keys.length));
+  if (optionalMax === 0) return keys;
 
-  /** Last 7 in `projects` order — upper hero band + largest tier (with mandatory heroes). */
-  const n = metas.length;
-  const tailStart = Math.max(0, n - 7);
-  const tail = metas
-    .filter((m) => m.idx >= tailStart && !used.has(m.idx))
-    .sort((a, b) => a.idx - b.idx);
+  const candidates = metas
+    .filter((m) => !used.has(m.idx))
+    .filter(
+      (m) =>
+        m.p.category !== "Commercials" &&
+        (m.p.category === "Music Videos" || m.p.category === "Narrative") &&
+        (m.p.priority === "hero" || m.p.priority === "large"),
+    )
+    .sort((a, b) => b.imp - a.imp);
 
-  return [...keys, ...tail];
+  return [...keys, ...candidates.slice(0, optionalMax)];
 }
 
 /**
