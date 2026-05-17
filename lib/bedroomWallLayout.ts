@@ -289,6 +289,51 @@ type Placed = {
   slug: string;
 };
 
+/** L / C / R foamcore territories (legacy X before mural shift). */
+const TERRITORY_LEGACY_X = [25, 47, 69] as const;
+
+function territoryTargetLeft(zone: number): number {
+  const z = ((zone % 3) + 3) % 3;
+  return shiftFromLegacyViewportCenter(TERRITORY_LEGACY_X[z]!);
+}
+
+function supportTerritoryZone(sI: number, slug: string): number {
+  return (sI + Math.floor(hash01(slug, 517) * 3)) % 3;
+}
+
+function textureTerritoryZone(texI: number, slug: string): number {
+  return (texI + Math.floor(hash01(slug, 519) * 3)) % 3;
+}
+
+/** Hotspot cap — soft “no more than ~3–4 in one clump” (real board breathing). */
+const LOCAL_HOTSPOT_R = 12.35;
+
+function countLocalNeighbors(
+  left: number,
+  top: number,
+  placed: Placed[],
+): number {
+  let n = 0;
+  for (const q of placed) {
+    const dx = (left - q.left) * 0.9;
+    const dy = top - q.top;
+    if (dx * dx + dy * dy < LOCAL_HOTSPOT_R * LOCAL_HOTSPOT_R) n += 1;
+  }
+  return n;
+}
+
+function localDensityOk(
+  left: number,
+  top: number,
+  placed: Placed[],
+  role: WallRole,
+): boolean {
+  const n = countLocalNeighbors(left, top, placed);
+  const cap =
+    role === "support" ? 3 : role === "texture" ? 4 : 4;
+  return n <= cap;
+}
+
 /** Physical stacking — caps deep bury; textures peel off anchors. */
 function roleSepMul(a: WallRole, b: WallRole): number {
   if (a === "headline" && b === "headline") return 1.78;
@@ -296,11 +341,11 @@ function roleSepMul(a: WallRole, b: WallRole): number {
     (a === "support" && b === "headline") ||
     (a === "headline" && b === "support")
   ) {
-    return 1.06;
+    return 1.09;
   }
   if (a === "texture" && b === "texture") return 0.72;
   if (a === "texture" || b === "texture") return 0.96;
-  return 1.05;
+  return 1.09;
 }
 
 function minSepOk(
@@ -335,17 +380,24 @@ function finalizeWallPosition(
   let L = leftPct;
   let T = topPct;
   let tries = 0;
-  while (tries < 48) {
+  const midX = wallContentMidpointPct("md");
+  while (tries < 56) {
+    const sepOk = minSepOk(L, T, size, placed, sepMul, role);
+    const densOk = localDensityOk(L, T, placed, role);
     const ok =
-      minSepOk(L, T, size, placed, sepMul, role) &&
+      sepOk &&
+      densOk &&
       !overlapsNamePlate(L, T, size) &&
       !overlapsEmailPlate(L, T, size) &&
       !overlapsIndexBand(L, T, size);
     if (ok) break;
 
-    if (!minSepOk(L, T, size, placed, sepMul, role)) {
-      L += (hash01(slug, tries + 180) - 0.5) * 3.1;
-      T += (hash01(slug, tries + 241) - 0.5) * 2.2;
+    if (!sepOk) {
+      L += (hash01(slug, tries + 180) - 0.5) * 3.25;
+      T += (hash01(slug, tries + 241) - 0.5) * 2.35;
+    } else if (!densOk) {
+      L += (L - midX) * 0.26 + (hash01(slug, tries + 400) - 0.5) * 3.1;
+      T += (hash01(slug, tries + 401) - 0.5) * 2.65;
     } else if (overlapsIndexBand(L, T, size)) {
       L -= 3.05;
       T += (hash01(slug, tries + 90) - 0.5) * 1.3;
@@ -506,7 +558,9 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
 
     for (
       let t = 0;
-      t < 44 && !minSepOk(left, top, m.layoutSize, placed, sepMul, "headline");
+      t < 44 &&
+      (!minSepOk(left, top, m.layoutSize, placed, sepMul, "headline") ||
+        !localDensityOk(left, top, placed, "headline"));
       t++
     ) {
       left += (hash01(slug, t + 20) - 0.5) * 2.5;
@@ -591,8 +645,8 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     let idealLeft =
       lo +
       t * (hi - lo) * 0.998 +
-      (t - 0.5) * 6.15 +
-      Math.sin(t * Math.PI) * 5.2 +
+      (t - 0.5) * 6.85 +
+      Math.cos(t * Math.PI) * 6.35 +
       (hash01(slug, 301 + sI) - 0.5) * 9.5 +
       (hash01(slug, 304 + sI) - 0.5) * 2.35;
     const edgeDrift = (hash01(slug, 307 + sI) - 0.5) * 6.2;
@@ -602,7 +656,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     let idealTop =
       39 +
       Math.sin(t * Math.PI * 2.1 + hash01(slug, 303) * 2) * 8.45 +
-      (1 - Math.abs(t - 0.48)) * 2.85 +
+      (1 - Math.abs(t - 0.48)) * 1.65 +
       (t - 0.5) * 4.95 -
       (hash01(slug, 302 + sI) - 0.5) * 5.6 +
       edgeDrift * edgeKick;
@@ -613,6 +667,9 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     const br = boardBreathing(idealLeft, idealTop, slug);
     idealLeft += br.dl * 0.62;
     idealTop += br.dt * 0.62;
+
+    const sZone = supportTerritoryZone(sI, slug);
+    idealLeft += (territoryTargetLeft(sZone) - idealLeft) * 0.41;
 
     idealLeft -= Math.max(0, idealLeft - (muralContentRightPct() - 14.95)) * 0.38;
     idealLeft = clampWallLeftPct(idealLeft, m.layoutSize, "support");
@@ -629,7 +686,10 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
         (hash01(slug, 500 + attempt) - 0.5) * (7 + attempt * 0.06);
       left = clampWallLeftPct(left, m.layoutSize, "support");
       top = Math.max(34, Math.min(60, top));
-      if (!minSepOk(left, top, m.layoutSize, placed, sepMul, "support"))
+      if (
+        !minSepOk(left, top, m.layoutSize, placed, sepMul, "support") ||
+        !localDensityOk(left, top, placed, "support")
+      )
         continue;
       const fin = finalizeWallPosition(
         left,
@@ -644,7 +704,10 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       );
       left = fin.left;
       top = fin.top;
-      if (!minSepOk(left, top, m.layoutSize, placed, sepMul * 0.92, "support"))
+      if (
+        !minSepOk(left, top, m.layoutSize, placed, sepMul * 0.92, "support") ||
+        !localDensityOk(left, top, placed, "support")
+      )
         continue;
       placed.push({ left, top, size: m.layoutSize, role: "support", slug });
       const z =
@@ -673,7 +736,11 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
         top += (hash01(slug, 750 + s) - 0.5) * 3.8;
         left = clampWallLeftPct(left, m.layoutSize, "support");
         top = Math.max(34, Math.min(61, top));
-        if (minSepOk(left, top, m.layoutSize, placed, mul, "support")) break;
+        if (
+          minSepOk(left, top, m.layoutSize, placed, mul, "support") &&
+          localDensityOk(left, top, placed, "support")
+        )
+          break;
       }
       const fin = finalizeWallPosition(
         left,
@@ -750,6 +817,9 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       }
     }
 
+    const texZone = textureTerritoryZone(texI, slug);
+    idealLeft += (territoryTargetLeft(texZone) - idealLeft) * 0.34;
+
     const skew = manualSkew(slug, texI + 2000);
     idealLeft += skew.dl * 0.52;
     idealTop += skew.dt * 0.52;
@@ -770,7 +840,10 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
         (hash01(slug, 960 + attempt) - 0.5) * (11 + attempt * 0.045);
       left = clampWallLeftPct(left, m.layoutSize, "texture");
       top = Math.max(10, Math.min(92, top));
-      if (!minSepOk(left, top, m.layoutSize, placed, sepMul, "texture"))
+      if (
+        !minSepOk(left, top, m.layoutSize, placed, sepMul, "texture") ||
+        !localDensityOk(left, top, placed, "texture")
+      )
         continue;
       const fin = finalizeWallPosition(
         left,
@@ -785,7 +858,10 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       );
       left = fin.left;
       top = fin.top;
-      if (!minSepOk(left, top, m.layoutSize, placed, sepMul * 0.89, "texture"))
+      if (
+        !minSepOk(left, top, m.layoutSize, placed, sepMul * 0.89, "texture") ||
+        !localDensityOk(left, top, placed, "texture")
+      )
         continue;
       placed.push({ left, top, size: m.layoutSize, role: "texture", slug });
       out[m.idx] = {
