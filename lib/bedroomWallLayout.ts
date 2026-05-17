@@ -78,9 +78,16 @@ const WALL_COMPACT_THUMB_SLUGS = new Set<string>([
   "smirnoff-live-louder-karol-g",
 ]);
 
-/** Top-left nameplate (approx. “Collin Druz”); keep poster slabs out of this band. */
-const NAME_PLATE_MAX_RIGHT_PCT = 28;
-const NAME_PLATE_MAX_BOTTOM_PCT = 16;
+/** Newest-seven boost skipped — still on the wall, reads as catalogue not hero. */
+const WALL_PROMINENCE_SKIP_SLUGS = new Set<string>(["doja-cat-gorgeous"]);
+
+/** Top-left logo lockup — tight; posters may graze the outer margin. */
+const NAME_PLATE_MAX_RIGHT_PCT = 14;
+const NAME_PLATE_MAX_BOTTOM_PCT = 8.5;
+
+/** Bottom-left contact block (~left 4% / bottom 4%); keep slabs from sitting on the copy. */
+const EMAIL_PLATE_LEFT_CAP_PCT = 44;
+const EMAIL_PLATE_TOP_FROM_TOP_PCT = 72;
 
 function railLeftEdgePct(): number {
   return 100 - RAIL_RIGHT_MARGIN_PCT - RAIL_PANEL_WIDTH_VW;
@@ -141,29 +148,23 @@ function overlapsNamePlate(
   const box = posterBoundsPct(leftPct, topPct, size);
   return (
     box.l < NAME_PLATE_MAX_RIGHT_PCT &&
-    box.r > 0 &&
+    box.r > 0.5 &&
     box.t < NAME_PLATE_MAX_BOTTOM_PCT &&
-    box.b > 0
+    box.b > 0.5
   );
 }
 
-function nudgeAwayFromNamePlate(
+function overlapsEmailPlate(
   leftPct: number,
   topPct: number,
   size: ProjectSize,
-): { left: number; top: number } {
-  let L = leftPct;
-  let T = topPct;
-  for (let i = 0; i < 26 && overlapsNamePlate(L, T, size); i++) {
-    L += 2.5;
-    T += 1.5;
-    L = clampWallLeftPct(L, size);
-    T = Math.max(14, Math.min(82, T));
-  }
-  return { left: L, top: T };
+): boolean {
+  const box = posterBoundsPct(leftPct, topPct, size);
+  if (box.l >= EMAIL_PLATE_LEFT_CAP_PCT) return false;
+  return box.b > EMAIL_PLATE_TOP_FROM_TOP_PCT;
 }
 
-/** Clear name plate + separation without uncapping vertical bands. */
+/** Clear name / email UI + neighbor separation — light nudges, not a dead zone. */
 function finalizeWallPosition(
   leftPct: number,
   topPct: number,
@@ -177,17 +178,23 @@ function finalizeWallPosition(
 ): { left: number; top: number } {
   let L = leftPct;
   let T = topPct;
-  const n0 = nudgeAwayFromNamePlate(L, T, size);
-  L = n0.left;
-  T = n0.top;
   let tries = 0;
-  while (
-    tries < 48 &&
-    (!minSepOk(L, T, size, placed, sepMul, selfProminent) ||
-      overlapsNamePlate(L, T, size))
-  ) {
-    L += (hash01(slug, tries + 180) - 0.5) * 3.6;
-    T += (hash01(slug, tries + 241) - 0.5) * 2.5;
+  while (tries < 42) {
+    const sepOk = minSepOk(L, T, size, placed, sepMul, selfProminent);
+    const nameHit = overlapsNamePlate(L, T, size);
+    const emailHit = overlapsEmailPlate(L, T, size);
+    if (sepOk && !nameHit && !emailHit) break;
+
+    if (!sepOk) {
+      L += (hash01(slug, tries + 180) - 0.5) * 2.9;
+      T += (hash01(slug, tries + 241) - 0.5) * 2.1;
+    } else if (emailHit) {
+      T -= 1.9;
+      L += 1.1;
+    } else if (nameHit) {
+      L += 1.7;
+      T += 0.75;
+    }
     L = clampWallLeftPct(L, size);
     T = Math.max(topMin, Math.min(topMax, T));
     tries++;
@@ -196,7 +203,7 @@ function finalizeWallPosition(
 }
 
 const MANDATORY_HERO_SLUGS = [
-  "doja-cat-gorgeous",
+  "le-sserafim-easy",
   "sabrina-carpenter-taste",
   "lil-dicky-hahaha-i-love-myself",
 ] as const;
@@ -204,7 +211,7 @@ const MANDATORY_HERO_SLUGS = [
 const MANDATORY_HERO_SLUG_SET = new Set<string>(MANDATORY_HERO_SLUGS);
 
 const ANCHOR_SLOT_BY_SLUG: Record<string, { left: number; top: number }> = {
-  "doja-cat-gorgeous": { left: 50, top: 18.2 },
+  "le-sserafim-easy": { left: 50, top: 18.2 },
   "sabrina-carpenter-taste": { left: 35.8, top: 24.8 },
   "lil-dicky-hahaha-i-love-myself": { left: 64.2, top: 24.8 },
 };
@@ -434,6 +441,18 @@ function pickHeroes(metas: WallMeta[]): WallMeta[] {
   return [...keys, ...candidates.slice(0, optionalMax)];
 }
 
+/** Newest-seven boost: skip EP / catalogue-first slugs so the next items fill those slots. */
+function buildProminentList(prelim: WallMeta[]): WallMeta[] {
+  const ordered = prelim.slice().sort(compareNewestFirst);
+  const out: WallMeta[] = [];
+  for (const m of ordered) {
+    if (out.length >= PROMINENT_RECENT_N) break;
+    if (WALL_PROMINENCE_SKIP_SLUGS.has(m.p.slug)) continue;
+    out.push(m);
+  }
+  return out;
+}
+
 /** Wall positions for `projects` (same length, index-aligned). */
 export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
   const n = projects.length;
@@ -445,15 +464,12 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     imp: importance(idx, p),
     layoutSize: p.size,
   }));
-  const prominentOrdered = prelim
-    .slice()
-    .sort(compareNewestFirst)
-    .slice(0, Math.min(PROMINENT_RECENT_N, prelim.length));
-  const prominent = new Set(prominentOrdered.map((m) => m.idx));
+  const prominentList = buildProminentList(prelim);
+  const prominent = new Set(prominentList.map((m) => m.idx));
   const prominentOrder = new Map<number, number>();
-  for (let k = 0; k < prominentOrdered.length; k++) {
-    prominentOrder.set(prominentOrdered[k]!.idx, k);
-  }
+  prominentList.forEach((m, k) => {
+    prominentOrder.set(m.idx, k);
+  });
 
   const metas: WallMeta[] = projects.map((p, idx) => {
     const isProm = prominent.has(idx);

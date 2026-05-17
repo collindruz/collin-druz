@@ -220,7 +220,7 @@ export function BedroomWall({
         Collin Druz
       </a>
 
-      <div className="pointer-events-none absolute bottom-[4%] left-[4%] z-[30] max-w-[16rem] -rotate-[0.4deg] font-sans text-[10px] font-normal tracking-[0.06em] text-charcoal/26 md:bottom-[5%] md:left-[5%] md:text-[11px]">
+      <div className="pointer-events-none absolute bottom-[4%] left-[4%] z-[118] max-w-[16rem] -rotate-[0.4deg] font-sans text-[10px] font-normal tracking-[0.06em] text-charcoal/26 md:bottom-[5%] md:left-[5%] md:text-[11px]">
         <a
           href={mailHref}
           aria-label={`Email ${CONTACT_EMAIL}`}
