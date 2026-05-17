@@ -215,7 +215,7 @@ export function BedroomWall({
       <a
         href={mailHref}
         aria-label={`Email ${CONTACT_EMAIL}`}
-        className="pointer-events-auto absolute left-[3%] top-[2.5%] z-[30] max-w-[9rem] font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-charcoal/30 outline-none transition-colors duration-500 hover:text-black focus-visible:text-black md:left-[4%] md:top-[3%] md:text-[11px]"
+        className="pointer-events-auto absolute left-[3%] top-[2.5%] z-[118] max-w-[9rem] font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-charcoal/30 outline-none transition-colors duration-500 hover:text-black focus-visible:text-black md:left-[4%] md:top-[3%] md:text-[11px]"
       >
         Collin Druz
       </a>

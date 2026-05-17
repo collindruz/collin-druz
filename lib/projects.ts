@@ -244,7 +244,7 @@ export const projects: Project[] = [
     description: "Live louder — Karol G, night pulse.",
     featured: true,
     priority: "hero",
-    size: "xl",
+    size: "sm",
   },
   {
     slug: "mgk-trippie-redd-beauty",

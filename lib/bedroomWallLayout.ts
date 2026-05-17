@@ -73,6 +73,15 @@ const RAIL_MURAL_GAP_PCT = 1.1;
 
 const WALL_HAND_SLACK_PCT = 2.6;
 
+/** Thumbnail reads soft at large scale — keep wall footprint small even if “prominent”. */
+const WALL_COMPACT_THUMB_SLUGS = new Set<string>([
+  "smirnoff-live-louder-karol-g",
+]);
+
+/** Top-left nameplate (approx. “Collin Druz”); keep poster slabs out of this band. */
+const NAME_PLATE_MAX_RIGHT_PCT = 28;
+const NAME_PLATE_MAX_BOTTOM_PCT = 16;
+
 function railLeftEdgePct(): number {
   return 100 - RAIL_RIGHT_MARGIN_PCT - RAIL_PANEL_WIDTH_VW;
 }
@@ -107,6 +116,83 @@ function nudgeLeftClusterTowardCenter(leftPct: number): number {
   const target = wallContentMidpointPct("md");
   if (leftPct >= target) return leftPct;
   return leftPct + (target - leftPct) * 0.48;
+}
+
+function posterBoundsPct(
+  leftPct: number,
+  topPct: number,
+  size: ProjectSize,
+): { l: number; r: number; t: number; b: number } {
+  const hw = effectiveHalfWidthPct(size);
+  const hh = hw * 1.25;
+  return {
+    l: leftPct - hw,
+    r: leftPct + hw,
+    t: topPct - hh,
+    b: topPct + hh,
+  };
+}
+
+function overlapsNamePlate(
+  leftPct: number,
+  topPct: number,
+  size: ProjectSize,
+): boolean {
+  const box = posterBoundsPct(leftPct, topPct, size);
+  return (
+    box.l < NAME_PLATE_MAX_RIGHT_PCT &&
+    box.r > 0 &&
+    box.t < NAME_PLATE_MAX_BOTTOM_PCT &&
+    box.b > 0
+  );
+}
+
+function nudgeAwayFromNamePlate(
+  leftPct: number,
+  topPct: number,
+  size: ProjectSize,
+): { left: number; top: number } {
+  let L = leftPct;
+  let T = topPct;
+  for (let i = 0; i < 26 && overlapsNamePlate(L, T, size); i++) {
+    L += 2.5;
+    T += 1.5;
+    L = clampWallLeftPct(L, size);
+    T = Math.max(14, Math.min(82, T));
+  }
+  return { left: L, top: T };
+}
+
+/** Clear name plate + separation without uncapping vertical bands. */
+function finalizeWallPosition(
+  leftPct: number,
+  topPct: number,
+  size: ProjectSize,
+  placed: Placed[],
+  sepMul: number,
+  selfProminent: boolean,
+  slug: string,
+  topMin: number,
+  topMax: number,
+): { left: number; top: number } {
+  let L = leftPct;
+  let T = topPct;
+  const n0 = nudgeAwayFromNamePlate(L, T, size);
+  L = n0.left;
+  T = n0.top;
+  let tries = 0;
+  while (
+    tries < 48 &&
+    (!minSepOk(L, T, size, placed, sepMul, selfProminent) ||
+      overlapsNamePlate(L, T, size))
+  ) {
+    L += (hash01(slug, tries + 180) - 0.5) * 3.6;
+    T += (hash01(slug, tries + 241) - 0.5) * 2.5;
+    L = clampWallLeftPct(L, size);
+    T = Math.max(topMin, Math.min(topMax, T));
+    tries++;
+  }
+  return { left: L, top: T };
 }
 
 const MANDATORY_HERO_SLUGS = [
@@ -152,6 +238,7 @@ const SIZE_RANK: Record<ProjectSize, number> = { sm: 0, md: 1, lg: 2, xl: 3 };
 const RANK_TO_SIZE: ProjectSize[] = ["sm", "md", "lg", "xl"];
 
 function prominentLayoutSize(p: Project, orderIndex: number): ProjectSize {
+  if (WALL_COMPACT_THUMB_SLUGS.has(p.slug)) return p.size;
   const base = SIZE_RANK[p.size];
   const perm = Math.floor(
     hash01(p.slug, 901) * PROMINENT_EXTRA_STEPS.length,
@@ -453,6 +540,21 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       tries++;
     }
 
+    const heroTopMax = isKeyAnchor ? 28.5 : 30;
+    const fin = finalizeWallPosition(
+      left,
+      top,
+      it.layoutSize,
+      placed,
+      heroSepMul,
+      isProm,
+      slug,
+      15,
+      heroTopMax,
+    );
+    left = fin.left;
+    top = fin.top;
+
     left = clampWallLeftPct(left, it.layoutSize);
     placed.push({ left, top, size: it.layoutSize, prominent: isProm });
     const offMul = isKeyAnchor ? 0.64 : 0.82;
@@ -543,6 +645,22 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       const mul = sepMulForTop(top) * 0.98 + zoneMul * 0.02;
 
       if (minSepOk(left, top, it.layoutSize, placed, mul, isProm)) {
+        const fin = finalizeWallPosition(
+          left,
+          top,
+          it.layoutSize,
+          placed,
+          mul,
+          isProm,
+          it.p.slug,
+          13.5,
+          81,
+        );
+        left = fin.left;
+        top = fin.top;
+        if (!minSepOk(left, top, it.layoutSize, placed, mul, isProm)) {
+          continue;
+        }
         placed.push({ left, top, size: it.layoutSize, prominent: isProm });
         const ox = handOffsetPx(it.p.slug, seq, 0);
         const oy = handOffsetPx(it.p.slug, seq, 1);
@@ -578,6 +696,22 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
         top = Math.max(13.5, Math.min(81, top));
         const mul = sepMulForTop(top);
         if (minSepOk(left, top, it.layoutSize, placed, mul, isProm)) {
+          const fin = finalizeWallPosition(
+            left,
+            top,
+            it.layoutSize,
+            placed,
+            mul,
+            isProm,
+            it.p.slug,
+            13.5,
+            81,
+          );
+          left = fin.left;
+          top = fin.top;
+          if (!minSepOk(left, top, it.layoutSize, placed, mul, isProm)) {
+            continue;
+          }
           placed.push({ left, top, size: it.layoutSize, prominent: isProm });
           const ox = handOffsetPx(it.p.slug, seq, 0);
           const oy = handOffsetPx(it.p.slug, seq, 1);
@@ -613,6 +747,19 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
         top = Math.max(13.5, Math.min(81, top));
         if (minSepOk(left, top, it.layoutSize, placed, mul, isProm)) break;
       }
+      const finLast = finalizeWallPosition(
+        left,
+        top,
+        it.layoutSize,
+        placed,
+        mul,
+        isProm,
+        it.p.slug,
+        13.5,
+        81,
+      );
+      left = finLast.left;
+      top = finLast.top;
       placed.push({ left, top, size: it.layoutSize, prominent: isProm });
       const ox = handOffsetPx(it.p.slug, seq, 0);
       const oy = handOffsetPx(it.p.slug, seq, 1);
