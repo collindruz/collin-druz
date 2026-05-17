@@ -445,7 +445,7 @@
   overscroll-behavior: contain;
   pointer-events: none;
   scrollbar-width: thin;
-  scrollbar-color: rgba(32, 34, 39, 0.28) transparent;
+  scrollbar-color: rgba(32, 34, 39, 0.32) transparent;
   padding-right: 0.2rem;
 }
 
@@ -466,12 +466,13 @@
   width: min(100%, 14.5rem);
   margin-left: auto;
   display: grid;
-  grid-template-columns: 1.95rem minmax(0, 1fr);
-  column-gap: 0.26rem;
+  grid-template-columns: 2.05rem minmax(0, 1fr);
+  column-gap: 0.28rem;
   align-items: start;
   text-align: left;
-  padding: 0.04rem 0.08rem;
-  color: rgba(26, 29, 33, 0.42);
+  padding: 0.09rem 0.08rem;
+  margin-bottom: 0.06rem;
+  color: rgba(26, 29, 33, 0.54);
   pointer-events: auto;
   transition: color 170ms ease;
 }
@@ -481,7 +482,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.07rem;
+  gap: 0.1rem;
 }
 
 .bedroom-project-rail__director {
@@ -490,52 +491,70 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 6px;
+  font-size: 6.75px;
   font-weight: 400;
-  letter-spacing: 0.055em;
-  line-height: 1.05;
-  opacity: 0.4;
+  letter-spacing: 0.052em;
+  line-height: 1.12;
+  opacity: 0.48;
 }
 
 .bedroom-project-rail__year {
   display: block;
   margin-right: 0;
   text-align: right;
-  font-size: 6.5px;
-  letter-spacing: 0.12em;
-  opacity: 0.36;
+  font-size: 7.25px;
+  letter-spacing: 0.115em;
+  line-height: 1.12;
+  opacity: 0.46;
 }
 
 .bedroom-project-rail__title {
   display: block;
-  font-size: 7px;
-  letter-spacing: 0.048em;
-  line-height: 1.05;
+  font-size: 8px;
+  letter-spacing: 0.046em;
+  line-height: 1.14;
   white-space: nowrap;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow:
-    0 0 8px rgba(233, 235, 231, 0.72),
-    0 0 2px rgba(233, 235, 231, 0.55);
+    0 0 9px rgba(233, 235, 231, 0.78),
+    0 0 2px rgba(233, 235, 231, 0.62);
+}
+
+/** Newest entries (year-desc order): marginally brighter for scan without “nav pills.” */
+.bedroom-project-rail__item:nth-child(-n + 12) {
+  color: rgba(24, 27, 31, 0.6);
+}
+
+.bedroom-project-rail__item:nth-child(-n + 12) .bedroom-project-rail__year {
+  opacity: 0.52;
+}
+
+.bedroom-project-rail__item:nth-child(-n + 12) .bedroom-project-rail__director {
+  opacity: 0.52;
 }
 
 .bedroom-project-rail__item:hover,
 .bedroom-project-rail__item:focus-visible {
-  color: rgba(20, 23, 27, 0.72);
+  color: rgba(18, 21, 25, 0.78);
 }
 
 .bedroom-project-rail__item.is-active {
-  color: rgba(14, 17, 21, 0.82);
+  color: rgba(14, 17, 21, 0.9);
+}
+
+.bedroom-project-rail__item.is-active .bedroom-project-rail__year {
+  opacity: 0.58;
 }
 
 .bedroom-project-rail__item.is-active .bedroom-project-rail__title {
-  font-size: 7.5px;
-  letter-spacing: 0.052em;
+  font-size: 8.75px;
+  letter-spacing: 0.048em;
 }
 
 .bedroom-project-rail__item.is-active .bedroom-project-rail__director {
-  opacity: 0.52;
+  opacity: 0.58;
 }
 
 .analog-cursor-active,

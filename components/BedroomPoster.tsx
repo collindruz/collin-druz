@@ -74,6 +74,8 @@ type Props = {
   project: Project;
   wallLayout: PosterWallLayout;
   open: boolean;
+  /** True when another poster is open — this closed poster recedes. */
+  wallDimmed: boolean;
   railHoverActive: boolean;
   /** Fine pointer (e.g. desktop): poster hover raises z so the slab reads above neighbors. */
   pointerFine: boolean;
@@ -124,6 +126,7 @@ function BedroomPosterInner({
   project,
   wallLayout,
   open,
+  wallDimmed,
   railHoverActive,
   pointerFine,
   onToggle,
@@ -153,10 +156,16 @@ function BedroomPosterInner({
   const [thumbHover, setThumbHover] = useState(false);
   const [thumbReveal, setThumbReveal] = useState(false);
 
-  /** Rail highlight or desktop pointer hover (dragging uses higher z). */
-  const hoverStack =
-    !isDragging &&
-    (railHoverActive || (pointerFine && thumbHover && !open));
+  const [narrowViewport, setNarrowViewport] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 820px)");
+    const apply = () => setNarrowViewport(mq.matches);
+    apply();
+    mq.addEventListener?.("change", apply);
+    return () => mq.removeEventListener?.("change", apply);
+  }, []);
 
   const embed = useMemo(
     () => getVideoEmbed(project.videoUrl),
@@ -180,6 +189,15 @@ function BedroomPosterInner({
     () => posterStillSrc(project, embed, ytId),
     [embed, project, ytId],
   );
+
+  /** Rail highlight or desktop pointer hover (dragging uses higher z). */
+  const hoverStack =
+    !isDragging &&
+    (railHoverActive || (pointerFine && thumbHover && !open));
+
+  const openScale = narrowViewport ? 1.34 : 1.72;
+  const openLiftPx = open ? (narrowViewport ? -14 : -24) : 0;
+  const passiveRecessed = wallDimmed && !open && !isDragging;
 
   /** Off-screen posters skip thumbnail decode until near viewport, rail, pointer hover, or open. */
   useLayoutEffect(() => {
@@ -899,8 +917,20 @@ function BedroomPosterInner({
         top: `${wallLayout.topPct}%`,
         left: `${wallLayout.leftPct}%`,
         width: wallLayout.width,
-        zIndex: isDragging ? 92 : hoverStack ? 82 : open ? 72 : wallLayout.zIndex,
-        transform: `translate(calc(-50% + ${wallLayout.offsetXPx}px), calc(-50% + ${wallLayout.offsetYPx}px)) rotate(${wallLayout.rotateDeg}deg)`,
+        zIndex: isDragging
+          ? 140
+          : open
+            ? 132
+            : hoverStack
+              ? 90
+              : wallLayout.zIndex,
+        transform: `translate(calc(-50% + ${wallLayout.offsetXPx}px), calc(-50% + ${wallLayout.offsetYPx}px + ${openLiftPx}px)) rotate(${wallLayout.rotateDeg}deg) scale(${open ? openScale : 1})`,
+        filter: passiveRecessed
+          ? "brightness(0.42) saturate(0.62) contrast(0.94)"
+          : undefined,
+        transition: isDragging
+          ? "none"
+          : "filter 380ms cubic-bezier(0.22, 1, 0.36, 1), transform 460ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     >
       <div

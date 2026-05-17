@@ -22,6 +22,7 @@ const PosterWallCell = memo(function PosterWallCell({
   project,
   wallLayout,
   open,
+  wallDimmed,
   railHoverActive,
   pointerFine,
   onTogglePoster,
@@ -29,6 +30,7 @@ const PosterWallCell = memo(function PosterWallCell({
   project: Project;
   wallLayout: PosterWallLayout;
   open: boolean;
+  wallDimmed: boolean;
   railHoverActive: boolean;
   pointerFine: boolean;
   onTogglePoster: (slug: string) => void;
@@ -42,6 +44,7 @@ const PosterWallCell = memo(function PosterWallCell({
       project={project}
       wallLayout={wallLayout}
       open={open}
+      wallDimmed={wallDimmed}
       railHoverActive={railHoverActive}
       pointerFine={pointerFine}
       onToggle={onToggle}
@@ -330,12 +333,24 @@ export function BedroomWall({
         </div>
       </div>
 
+      {openSlug ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[85]"
+          aria-hidden
+          style={{
+            background:
+              "radial-gradient(ellipse 95% 72% at 50% 38%, transparent 0%, rgba(14,16,20,0.18) 52%, rgba(8,10,14,0.48) 100%)",
+          }}
+        />
+      ) : null}
+
       {projects.map((project, i) => (
         <PosterWallCell
           key={project.slug}
           project={project}
           wallLayout={wallLayouts[i]!}
           open={openSlug === project.slug}
+          wallDimmed={openSlug !== null && openSlug !== project.slug}
           railHoverActive={railHoverBoost && hoverSlug === project.slug}
           pointerFine={!coarsePointer}
           onTogglePoster={onTogglePoster}
