@@ -16,7 +16,7 @@ export type Project = {
   slug: string;
   tapeCode: string;
   archivalStamp?: string;
-  title: string;
+  title: string; 
   category: ProjectCategory;
   year: string;
   role: string;
@@ -37,7 +37,7 @@ export type Project = {
 
 /**
  * Curated wall + archive from collindruz.com and additional reels (Apr 2026).
- * Literal array order is stable; `lib/bedroomWallLayout` boosts the newest ~7 for hero band + scale.
+ * Literal array order is stable; `lib/bedroomWallLayout` assigns the wall via a manual slot map + priority score.
  */
 export const projects: Project[] = [
   {

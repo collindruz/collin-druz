@@ -4,7 +4,7 @@ import {
   type ProjectSize,
 } from "@/lib/projects";
 
-/** Per-poster placement from the wall algorithm (pure; safe to run at build / on the server). */
+/** Per-poster placement for the wall (pure). */
 export type PosterWallLayout = {
   topPct: number;
   leftPct: number;
@@ -28,17 +28,6 @@ function widthForProjectSize(size: ProjectSize): string {
     case "sm":
       return "clamp(58px, 7.35vw, 142px)";
   }
-}
-
-const SIZE_SEP_PCT: Record<ProjectSize, number> = {
-  xl: 11.85,
-  lg: 10.5,
-  md: 8.45,
-  sm: 7.15,
-};
-
-function sepMin(a: ProjectSize, b: ProjectSize): number {
-  return (SIZE_SEP_PCT[a] + SIZE_SEP_PCT[b]) * 0.568;
 }
 
 const PR_RANK: Record<ProjectPriority, number> = {
@@ -86,30 +75,11 @@ const HEADLINE_ANCHOR_SLUGS = [
 
 const HEADLINE_ANCHOR_SET = new Set<string>(HEADLINE_ANCHOR_SLUGS);
 
-/** Hero priority → grid cell (col 0–4, row 0–3). Top + center rows anchor the board. */
-const HERO_GRID_CELL: Record<string, { c: number; r: number }> = {
-  "doja-cat-agora-hills": { c: 2, r: 0 },
-  "sabrina-carpenter-taste": { c: 0, r: 0 },
-  "lil-dicky-hahaha-i-love-myself": { c: 4, r: 0 },
-  "charlie-puth-thats-not-how-this-works": { c: 1, r: 1 },
-  "le-sserafim-easy": { c: 3, r: 1 },
-};
-
-const PRIORITY_HERO_ORDER = [
-  "doja-cat-agora-hills",
-  "sabrina-carpenter-taste",
-  "lil-dicky-hahaha-i-love-myself",
-  "charlie-puth-thats-not-how-this-works",
-  "le-sserafim-easy",
-] as const;
-
-/** Landscape loose grid: 5×4 hand-taped cells. */
-const GRID_COLS = 5;
-const GRID_ROWS = 4;
+/** Debug / rough density hint only (no placement physics). */
+export const WALL_LOCAL_HOTSPOT_RADIUS_PCT = 8.2;
 
 const NAME_EXCL_RIGHT = 20;
 const NAME_EXCL_BOTTOM = 16;
-const EMAIL_EXCL_RIGHT = 22;
 const EMAIL_EXCL_TOP = 100 - BOARD_PAD_X - 4 - 11 - BOARD_PAD_X;
 
 function railLeftEdgePct(): number {
@@ -126,12 +96,12 @@ function effectiveHalfWidthPct(size: ProjectSize): number {
 
 export type WallRole = "headline" | "support" | "texture";
 
-type Placed = {
-  left: number;
-  top: number;
-  size: ProjectSize;
+type WallMeta = {
+  idx: number;
+  p: Project;
+  score: number;
+  layoutSize: ProjectSize;
   role: WallRole;
-  slug: string;
 };
 
 function clampWallLeftPct(
@@ -156,52 +126,22 @@ function wallContentMidpointPct(size: ProjectSize): number {
   return (minC + maxC) / 2;
 }
 
-function posterBoundsPct(
-  leftPct: number,
-  topPct: number,
-  size: ProjectSize,
-): { l: number; r: number; t: number; b: number } {
+/** Board rectangle for vertical clamp (percent). */
+function gridExtents(size: ProjectSize, role: WallRole): {
+  leftMin: number;
+  leftMax: number;
+  topMin: number;
+  topMax: number;
+} {
   const hw = effectiveHalfWidthPct(size);
-  const hh = hw * 1.25;
-  return {
-    l: leftPct - hw,
-    r: leftPct + hw,
-    t: topPct - hh,
-    b: topPct + hh,
-  };
-}
-
-function overlapsNamePlate(
-  leftPct: number,
-  topPct: number,
-  size: ProjectSize,
-): boolean {
-  const box = posterBoundsPct(leftPct, topPct, size);
-  return (
-    box.l < NAME_EXCL_RIGHT &&
-    box.r > 0.5 &&
-    box.t < NAME_EXCL_BOTTOM &&
-    box.b > 0.5
-  );
-}
-
-function overlapsEmailPlate(
-  leftPct: number,
-  topPct: number,
-  size: ProjectSize,
-): boolean {
-  const box = posterBoundsPct(leftPct, topPct, size);
-  if (box.l >= EMAIL_EXCL_RIGHT) return false;
-  return box.b > EMAIL_EXCL_TOP;
-}
-
-function overlapsIndexBand(
-  leftPct: number,
-  topPct: number,
-  size: ProjectSize,
-): boolean {
-  const box = posterBoundsPct(leftPct, topPct, size);
-  return box.r > muralContentRightPct();
+  let leftMin = BOARD_PAD_X + hw * 0.35;
+  const leftMax = muralContentRightPct() - hw * 0.35;
+  const topMin = NAME_EXCL_BOTTOM + hw * 0.55;
+  const topMax = EMAIL_EXCL_TOP - hw * 0.9;
+  if (role !== "texture") {
+    leftMin = Math.max(leftMin, NAME_EXCL_RIGHT * 0.35);
+  }
+  return { leftMin, leftMax, topMin, topMax };
 }
 
 const SIZE_RANK: Record<ProjectSize, number> = { sm: 0, md: 1, lg: 2, xl: 3 };
@@ -230,14 +170,6 @@ function wallPlacementScore(idx: number, p: Project): number {
   return s;
 }
 
-function hash01(slug: string, salt: number): number {
-  let h = salt * 374761393;
-  for (let i = 0; i < slug.length; i++) {
-    h = (h + slug.charCodeAt(i) * (i + 97)) >>> 0;
-  }
-  return (((h % 10_000) + 10_000) % 10_000) / 10_000;
-}
-
 function handOffsetPx(slug: string, k: number, axis: 0 | 1): number {
   let h = k * 140973497 + axis * 7903991;
   for (let i = 0; i < slug.length; i++) {
@@ -248,247 +180,109 @@ function handOffsetPx(slug: string, k: number, axis: 0 | 1): number {
   return sign * mag;
 }
 
-/** Middle third of the board (matches debug “C” band) — extra spacing + density rules here only. */
-function centerTerritoryXBounds(ex: ReturnType<typeof gridExtents>): {
-  lo: number;
-  hi: number;
-} {
-  const w = ex.leftMax - ex.leftMin;
-  return {
-    lo: ex.leftMin + w / 3,
-    hi: ex.leftMin + (2 * w) / 3,
-  };
-}
-
-function inCenterTerritory(leftPct: number, ex: ReturnType<typeof gridExtents>): boolean {
-  const { lo, hi } = centerTerritoryXBounds(ex);
-  return leftPct >= lo && leftPct <= hi;
-}
-
-/** Hotspot radius (debug + light density check). */
-const LOCAL_HOTSPOT_R = 10.2;
-const LOCAL_HOTSPOT_R_CENTER = 8.78;
-export const WALL_LOCAL_HOTSPOT_RADIUS_PCT = LOCAL_HOTSPOT_R;
-
-function countLocalNeighbors(
-  left: number,
-  top: number,
-  placed: Placed[],
-  ex: ReturnType<typeof gridExtents>,
-): number {
-  const r = inCenterTerritory(left, ex)
-    ? LOCAL_HOTSPOT_R_CENTER
-    : LOCAL_HOTSPOT_R;
-  const r2 = r * r;
-  const center = inCenterTerritory(left, ex);
-  let n = 0;
-  for (const q of placed) {
-    let dx = (left - q.left) * 0.9;
-    let dy = top - q.top;
-    /** Center only: vertical proximity counts “closer” → fewer tolerated stacks. */
-    if (center) {
-      dx *= 1.05;
-      dy *= 0.69;
-    }
-    if (dx * dx + dy * dy < r2) n += 1;
-  }
-  return n;
-}
-
-function localDensityOk(
-  left: number,
-  top: number,
-  placed: Placed[],
-  role: WallRole,
-  ex: ReturnType<typeof gridExtents>,
-): boolean {
-  const n = countLocalNeighbors(left, top, placed, ex);
-  const center = inCenterTerritory(left, ex);
-  if (center) return n <= 2;
-  const cap = role === "support" ? 3 : role === "texture" ? 4 : 3;
-  return n <= cap;
-}
-
-function roleSepMul(a: WallRole, b: WallRole): number {
-  if (a === "headline" && b === "headline") return 2.08;
-  if (
-    (a === "support" && b === "headline") ||
-    (a === "headline" && b === "support")
-  ) {
-    return 1.22;
-  }
-  if (
-    (a === "support" && b === "texture") ||
-    (a === "texture" && b === "support")
-  ) {
-    return 0.88;
-  }
-  if (a === "texture" && b === "texture") return 0.72;
-  if (a === "texture" || b === "texture") return 1.06;
-  return 1.1;
-}
-
-function minSepOk(
-  left: number,
-  top: number,
-  size: ProjectSize,
-  placed: Placed[],
-  sepMul: number,
-  role: WallRole,
-  ex: ReturnType<typeof gridExtents>,
-): boolean {
-  const cNew = inCenterTerritory(left, ex);
-  for (const q of placed) {
-    let need = sepMin(size, q.size) * sepMul;
-    need *= roleSepMul(role, q.role);
-    const cQ = inCenterTerritory(q.left, ex);
-    if (cNew && cQ) need *= 1.312;
-    else if (cNew || cQ) need *= 1.11;
-    const dx = (left - q.left) * 0.885;
-    const dy = top - q.top;
-    if (dx * dx + dy * dy < need * need) return false;
-  }
-  return true;
-}
-
-/** Board rectangle for grid (percent). */
-function gridExtents(size: ProjectSize, role: WallRole): {
-  leftMin: number;
-  leftMax: number;
-  topMin: number;
-  topMax: number;
-} {
-  const hw = effectiveHalfWidthPct(size);
-  let leftMin = BOARD_PAD_X + hw * 0.35;
-  const leftMax = muralContentRightPct() - hw * 0.35;
-  const topMin = NAME_EXCL_BOTTOM + hw * 0.55;
-  const topMax = EMAIL_EXCL_TOP - hw * 0.9;
-  if (role !== "texture") {
-    leftMin = Math.max(leftMin, NAME_EXCL_RIGHT * 0.35);
-  }
-  return { leftMin, leftMax, topMin, topMax };
-}
-
-function cellCenter(
-  col: number,
-  row: number,
-  ex: ReturnType<typeof gridExtents>,
-  slug: string,
-): { left: number; top: number } {
-  const cw = (ex.leftMax - ex.leftMin) / GRID_COLS;
-  const ch = (ex.topMax - ex.topMin) / GRID_ROWS;
-  let left = ex.leftMin + (col + 0.5) * cw;
-  if (col === 1) left -= cw * 0.198;
-  if (col === 3) left += cw * 0.198;
-  if (col === 2) {
-    left += (hash01(slug, 901) - 0.5) * cw * 0.79;
-  }
-  const top = ex.topMin + (row + 0.5) * ch;
-  return { left, top };
-}
-
-function gridJitterPct(
-  slug: string,
-  salt: number,
-  ex: ReturnType<typeof gridExtents>,
-  col: number,
-): { dx: number; dy: number } {
-  const base = cellCenter(col, 0, ex, slug);
-  const centerHeavy = inCenterTerritory(base.left, ex);
-  const j = centerHeavy
-    ? 2.25 + hash01(slug, salt + 11) * 2.35
-    : 1.5 + hash01(slug, salt + 11) * 1.5;
-  /** Center: wider horizontal (~4–8% effective fan), calmer vertical → less middle stacking. */
-  const jx = centerHeavy ? j * 1.48 : j;
-  const jy = centerHeavy ? j * 0.73 : j;
-  return {
-    dx: (hash01(slug, salt) - 0.5) * 2 * jx,
-    dy: (hash01(slug, salt + 7) - 0.5) * 2 * jy,
-  };
-}
-
-function gridRotateDeg(slug: string, role: WallRole, salt: number): number {
-  const amp = 1.55 + hash01(slug, salt + 3) * 1.45;
-  const v = (hash01(slug, salt) - 0.5) * 2 * amp;
-  const damp = role === "headline" ? 0.82 : 0.95;
-  return Math.round(v * damp * 100) / 100;
-}
-
-function placementOk(
-  left: number,
-  top: number,
-  size: ProjectSize,
-  placed: Placed[],
-  role: WallRole,
-  sepMul: number,
-  ex: ReturnType<typeof gridExtents>,
-): boolean {
-  if (!minSepOk(left, top, size, placed, sepMul, role, ex)) return false;
-  if (!localDensityOk(left, top, placed, role, ex)) return false;
-  if (
-    overlapsNamePlate(left, top, size) ||
-    overlapsEmailPlate(left, top, size) ||
-    overlapsIndexBand(left, top, size)
-  ) {
-    return false;
-  }
-  return true;
-}
-
-function relaxPlacement(
-  left: number,
-  top: number,
-  size: ProjectSize,
-  placed: Placed[],
-  role: WallRole,
-  sepMul: number,
-  slug: string,
-  ex: ReturnType<typeof gridExtents>,
-): { left: number; top: number } {
-  let L = left;
-  let T = top;
-  /** No drift toward board midpoint — search is uncorrelated noise around the grid seed only. */
-  const seedInCenter = inCenterTerritory(left, ex);
-  for (let k = 0; k < 72; k++) {
-    if (placementOk(L, T, size, placed, role, sepMul, ex)) break;
-    const s = 0.42 + k * 0.038;
-    const hMul = seedInCenter ? 3.32 : 2.95;
-    const vMul = seedInCenter ? 1.96 : 2.55;
-    L =
-      left +
-      (hash01(slug, k + 50) - 0.5) * 2 * s * hMul +
-      (hash01(slug, k + 80) - 0.5) * 0.95;
-    T =
-      top +
-      (hash01(slug, k + 110) - 0.5) * 2 * s * vMul +
-      (hash01(slug, k + 140) - 0.5) * 0.82;
-    L = clampWallLeftPct(L, size, role);
-    T = Math.max(ex.topMin + 1, Math.min(ex.topMax - 1, T));
-  }
-  return { left: L, top: T };
-}
-
-type WallMeta = {
-  idx: number;
-  p: Project;
-  score: number;
-  layoutSize: ProjectSize;
-  role: WallRole;
+/** One art-directed slot on the foamcore board (viewport % center, CSS tier, tilt, stacking). */
+export type ManualBoardSlot = {
+  leftPct: number;
+  topPct: number;
+  size: ProjectSize;
+  rotateDeg: number;
+  zIndex: number;
 };
 
-export function sortProjectsByYearDesc(projectList: Project[]): Project[] {
-  return projectList
-    .map((project, idx) => ({ project, idx }))
-    .sort((a, b) => {
-      const ya = yearNum(a.project);
-      const yb = yearNum(b.project);
-      if (yb !== ya) return yb - ya;
-      const sa = wallPlacementScore(a.idx, a.project);
-      const sb = wallPlacementScore(b.idx, b.project);
-      if (sb !== sa) return sb - sa;
-      return a.idx - b.idx;
-    })
-    .map(({ project }) => project);
+/**
+ * Fixed slot map — ordered **best first**. Projects are sorted by `wallPlacementScore` (newest +
+ * anchors + priority); rank 0 takes slot 0, etc.
+ *
+ * Visual pass: wide foamcore board — heroes in xl across L/C/R, shallow rows, less vertical ladder.
+ */
+const MANUAL_BOARD_SLOTS: ManualBoardSlot[] = [
+  { leftPct: 11.5, topPct: 24.6, size: "xl", rotateDeg: 0.5, zIndex: 76 },
+  { leftPct: 40.2, topPct: 24.3, size: "xl", rotateDeg: -0.45, zIndex: 75 },
+  { leftPct: 68, topPct: 24.7, size: "xl", rotateDeg: -0.58, zIndex: 74 },
+  { leftPct: 24.8, topPct: 27.5, size: "lg", rotateDeg: 0.26, zIndex: 71 },
+  { leftPct: 55.5, topPct: 27.3, size: "lg", rotateDeg: -0.24, zIndex: 70 },
+  { leftPct: 9.5, topPct: 32.6, size: "lg", rotateDeg: -0.32, zIndex: 64 },
+  { leftPct: 72.5, topPct: 32.8, size: "lg", rotateDeg: 0.3, zIndex: 63 },
+  { leftPct: 31, topPct: 33, size: "md", rotateDeg: 0.14, zIndex: 54 },
+  { leftPct: 48.5, topPct: 32.5, size: "md", rotateDeg: -0.1, zIndex: 53 },
+  { leftPct: 62, topPct: 33.4, size: "md", rotateDeg: -0.2, zIndex: 52 },
+  { leftPct: 19, topPct: 35.4, size: "md", rotateDeg: 0.18, zIndex: 50 },
+  { leftPct: 40, topPct: 35.8, size: "md", rotateDeg: -0.08, zIndex: 49 },
+  { leftPct: 58, topPct: 35.2, size: "md", rotateDeg: 0.12, zIndex: 48 },
+  { leftPct: 13, topPct: 40.2, size: "md", rotateDeg: 0.22, zIndex: 46 },
+  { leftPct: 27, topPct: 40.6, size: "md", rotateDeg: -0.16, zIndex: 45 },
+  { leftPct: 44, topPct: 39.8, size: "md", rotateDeg: 0.1, zIndex: 44 },
+  { leftPct: 66, topPct: 40.4, size: "md", rotateDeg: -0.22, zIndex: 43 },
+  { leftPct: 52, topPct: 42, size: "sm", rotateDeg: -0.06, zIndex: 42 },
+  { leftPct: 34, topPct: 41.8, size: "sm", rotateDeg: 0.08, zIndex: 41 },
+  { leftPct: 74, topPct: 41.6, size: "sm", rotateDeg: 0.14, zIndex: 40 },
+  { leftPct: 10.5, topPct: 46, size: "md", rotateDeg: -0.26, zIndex: 39 },
+  { leftPct: 23.5, topPct: 47, size: "md", rotateDeg: 0.16, zIndex: 38 },
+  { leftPct: 38, topPct: 46.2, size: "md", rotateDeg: -0.12, zIndex: 37 },
+  { leftPct: 56, topPct: 46.6, size: "md", rotateDeg: 0.2, zIndex: 36 },
+  { leftPct: 69, topPct: 46.3, size: "md", rotateDeg: -0.14, zIndex: 35 },
+  { leftPct: 47, topPct: 48.4, size: "sm", rotateDeg: 0.06, zIndex: 34 },
+  { leftPct: 16, topPct: 49, size: "sm", rotateDeg: -0.1, zIndex: 33 },
+  { leftPct: 63, topPct: 48.8, size: "sm", rotateDeg: 0.11, zIndex: 32 },
+  { leftPct: 30, topPct: 51.2, size: "md", rotateDeg: 0.14, zIndex: 31 },
+  { leftPct: 41.5, topPct: 51, size: "md", rotateDeg: -0.09, zIndex: 30 },
+  { leftPct: 53, topPct: 51.6, size: "md", rotateDeg: 0.18, zIndex: 29 },
+  { leftPct: 12, topPct: 54.8, size: "md", rotateDeg: -0.2, zIndex: 28 },
+  { leftPct: 25, topPct: 55.4, size: "sm", rotateDeg: 0.12, zIndex: 27 },
+  { leftPct: 36, topPct: 55, size: "sm", rotateDeg: -0.07, zIndex: 26 },
+  { leftPct: 60, topPct: 55.2, size: "sm", rotateDeg: -0.11, zIndex: 25 },
+  { leftPct: 71, topPct: 54.9, size: "sm", rotateDeg: 0.09, zIndex: 24 },
+  { leftPct: 48, topPct: 56.8, size: "sm", rotateDeg: 0.05, zIndex: 23 },
+  { leftPct: 19, topPct: 60.2, size: "sm", rotateDeg: -0.15, zIndex: 22 },
+  { leftPct: 33, topPct: 60.6, size: "sm", rotateDeg: 0.13, zIndex: 21 },
+  { leftPct: 45, topPct: 60, size: "sm", rotateDeg: -0.08, zIndex: 20 },
+  { leftPct: 64, topPct: 60.4, size: "sm", rotateDeg: 0.16, zIndex: 19 },
+  { leftPct: 40, topPct: 63.8, size: "sm", rotateDeg: 0.04, zIndex: 18 },
+];
+
+function overflowBoardSlot(rank: number): ManualBoardSlot {
+  const base = MANUAL_BOARD_SLOTS.length;
+  const i = rank - base;
+  const ex = gridExtents("sm", "support");
+  const cols = 5;
+  const col = i % cols;
+  const row = Math.floor(i / cols);
+  const cw = (ex.leftMax - ex.leftMin) / cols;
+  const left = ex.leftMin + (col + 0.5) * cw;
+  const ch = (ex.topMax - ex.topMin) / 8;
+  const top = Math.min(ex.topMax - 2, ex.topMin + 52 + row * ch);
+  return {
+    leftPct: Math.round(left * 100) / 100,
+    topPct: Math.round(top * 100) / 100,
+    size: "sm",
+    rotateDeg: Math.round(((i % 3) - 1) * 0.12 * 100) / 100,
+    zIndex: 16 + (i % 7),
+  };
+}
+
+function slotForRank(rank: number): ManualBoardSlot {
+  return MANUAL_BOARD_SLOTS[rank] ?? overflowBoardSlot(rank);
+}
+
+function slotSizeForProjectIdx(
+  projects: Project[],
+  metas: WallMeta[],
+  idx: number,
+): ProjectSize {
+  const ranked = [...metas].sort((a, b) => b.score - a.score || a.idx - b.idx);
+  const pos = ranked.findIndex((m) => m.idx === idx);
+  if (pos < 0) return "md";
+  return slotForRank(pos).size;
+}
+
+function pseudoSepMin(a: ProjectSize, b: ProjectSize): number {
+  const SIZE_SEP_PCT: Record<ProjectSize, number> = {
+    xl: 11.85,
+    lg: 10.5,
+    md: 8.45,
+    sm: 7.15,
+  };
+  return (SIZE_SEP_PCT[a] + SIZE_SEP_PCT[b]) * 0.45;
 }
 
 function buildMetasForWall(projects: Project[]): WallMeta[] {
@@ -545,6 +339,21 @@ function buildMetasForWall(projects: Project[]): WallMeta[] {
   });
 }
 
+export function sortProjectsByYearDesc(projectList: Project[]): Project[] {
+  return projectList
+    .map((project, idx) => ({ project, idx }))
+    .sort((a, b) => {
+      const ya = yearNum(a.project);
+      const yb = yearNum(b.project);
+      if (yb !== ya) return yb - ya;
+      const sa = wallPlacementScore(a.idx, a.project);
+      const sb = wallPlacementScore(b.idx, b.project);
+      if (sb !== sa) return sb - sa;
+      return a.idx - b.idx;
+    })
+    .map(({ project }) => project);
+}
+
 export type WallDebugTerritoryBand = {
   label: "L" | "C" | "R";
   leftPct: number;
@@ -565,7 +374,6 @@ export type WallDebugPosterMark = {
 
 export type WallDebugOverlay = {
   territory: WallDebugTerritoryBand[];
-  /** Inset-normalized grid (same % space as posters). */
   grid?: { verticalsPct: number[]; horizontalsPct: number[] };
   posters: WallDebugPosterMark[];
 };
@@ -594,6 +402,9 @@ function getDebugTerritoryBands(): WallDebugTerritoryBand[] {
   ];
 }
 
+const DEBUG_GRID_COLS = 5;
+const DEBUG_GRID_ROWS = 3;
+
 export function getWallDebugOverlayData(
   projects: Project[],
   layouts: PosterWallLayout[],
@@ -607,7 +418,8 @@ export function getWallDebugOverlayData(
   const posters: WallDebugPosterMark[] = projects.map((p, i) => {
     const m = metaByIdx.get(i)!;
     const lay = layouts[i]!;
-    const hw = effectiveHalfWidthPct(m.layoutSize);
+    const slotSz = slotSizeForProjectIdx(projects, metas, i);
+    const hw = effectiveHalfWidthPct(slotSz);
     return {
       idx: i,
       slug: p.slug,
@@ -616,130 +428,22 @@ export function getWallDebugOverlayData(
       topPct: lay.topPct,
       halfWidthPct: hw,
       halfHeightPct: hw * 1.25,
-      hotspotRadiusPct: LOCAL_HOTSPOT_R,
-      sepVsMdPct: sepMin(m.layoutSize, "md"),
+      hotspotRadiusPct: WALL_LOCAL_HOTSPOT_RADIUS_PCT,
+      sepVsMdPct: pseudoSepMin(slotSz, "md"),
     };
   });
   const ex = gridExtents("md", "support");
-  const cw = (ex.leftMax - ex.leftMin) / GRID_COLS;
-  const ch = (ex.topMax - ex.topMin) / GRID_ROWS;
-  const verticalsPct = Array.from({ length: GRID_COLS - 1 }, (_, i) =>
-    Math.round((ex.leftMin + (i + 1) * cw) * 100) / 100,
+  const cw = (ex.leftMax - ex.leftMin) / DEBUG_GRID_COLS;
+  const ch = (ex.topMax - ex.topMin) / DEBUG_GRID_ROWS;
+  const verticalsPct = Array.from(
+    { length: DEBUG_GRID_COLS - 1 },
+    (_, i) => Math.round((ex.leftMin + (i + 1) * cw) * 100) / 100,
   );
-  const horizontalsPct = Array.from({ length: GRID_ROWS - 1 }, (_, i) =>
-    Math.round((ex.topMin + (i + 1) * ch) * 100) / 100,
+  const horizontalsPct = Array.from(
+    { length: DEBUG_GRID_ROWS - 1 },
+    (_, i) => Math.round((ex.topMin + (i + 1) * ch) * 100) / 100,
   );
   return { territory, grid: { verticalsPct, horizontalsPct }, posters };
-}
-
-type CellKey = `${number},${number}`;
-
-function keyCell(c: number, r: number): CellKey {
-  return `${c},${r}`;
-}
-
-function assignGridCells(
-  metas: WallMeta[],
-): Map<number, { c: number; r: number }> {
-  const taken = new Set<CellKey>();
-  const assign = new Map<number, { c: number; r: number }>();
-
-  const take = (c: number, r: number, idx: number) => {
-    if (c < 0 || c >= GRID_COLS || r < 0 || r >= GRID_ROWS) return false;
-    const k = keyCell(c, r);
-    if (taken.has(k)) return false;
-    taken.add(k);
-    assign.set(idx, { c, r });
-    return true;
-  };
-
-  const heroMetas = PRIORITY_HERO_ORDER.map((slug) =>
-    metas.find((m) => m.p.slug === slug && m.role === "headline"),
-  ).filter(Boolean) as WallMeta[];
-
-  for (const m of heroMetas) {
-    const cell = HERO_GRID_CELL[m.p.slug];
-    if (cell) take(cell.c, cell.r, m.idx);
-  }
-
-  const otherHeadlines = metas
-    .filter((m) => m.role === "headline" && !assign.has(m.idx))
-    .sort((a, b) => b.score - a.score);
-
-  const headlinePool: Array<{ c: number; r: number }> = [
-    { c: 2, r: 2 },
-    { c: 1, r: 2 },
-    { c: 3, r: 2 },
-    { c: 0, r: 1 },
-    { c: 4, r: 1 },
-    { c: 2, r: 3 },
-    { c: 0, r: 2 },
-    { c: 4, r: 2 },
-    { c: 1, r: 0 },
-    { c: 3, r: 0 },
-    { c: 1, r: 3 },
-    { c: 3, r: 3 },
-  ];
-  let hi = 0;
-  for (const m of otherHeadlines) {
-    let placedH = false;
-    for (; hi < headlinePool.length; hi++) {
-      const slot = headlinePool[hi]!;
-      if (take(slot.c, slot.r, m.idx)) {
-        placedH = true;
-        hi++;
-        break;
-      }
-    }
-    if (!placedH) break;
-  }
-
-  const supportQueue = metas
-    .filter((m) => m.role === "support")
-    .sort((a, b) => b.score - a.score);
-
-  const supportPool: Array<{ c: number; r: number }> = [];
-  for (const r of [2, 1, 3, 0]) {
-    for (const c of [2, 1, 3, 0, 4]) {
-      supportPool.push({ c, r });
-    }
-  }
-  for (const { c, r } of supportPool) {
-    if (supportQueue.length === 0) break;
-    const k = keyCell(c, r);
-    if (taken.has(k)) continue;
-    const m = supportQueue.shift()!;
-    take(c, r, m.idx);
-  }
-
-  const textureQueue = metas
-    .filter((m) => m.role === "texture")
-    .sort((a, b) => a.score - b.score);
-
-  const texturePool: Array<{ c: number; r: number }> = [];
-  for (const c of [0, 4, 1, 3, 2]) texturePool.push({ c, r: 3 });
-  for (const r of [0, 1]) {
-    for (const c of [0, 4]) texturePool.push({ c, r });
-  }
-  for (const { c, r } of texturePool) {
-    if (textureQueue.length === 0) break;
-    const k = keyCell(c, r);
-    if (taken.has(k)) continue;
-    const m = textureQueue.shift()!;
-    take(c, r, m.idx);
-  }
-
-  const remaining = metas.filter((m) => !assign.has(m.idx));
-  for (const m of remaining) {
-    let placedCell = false;
-    for (let r = GRID_ROWS - 1; r >= 0 && !placedCell; r--) {
-      for (let c = 0; c < GRID_COLS && !placedCell; c++) {
-        placedCell = take(c, r, m.idx);
-      }
-    }
-  }
-
-  return assign;
 }
 
 export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
@@ -747,106 +451,32 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
   if (n === 0) return [];
 
   const metas = buildMetasForWall(projects);
-  const byIdx = new Map(metas.map((m) => [m.idx, m]));
-  const cellByIdx = assignGridCells(metas);
-
-  const orderPlace = [...metas].sort((a, b) => {
-    const ra = roleRank(a.role);
-    const rb = roleRank(b.role);
-    if (ra !== rb) return ra - rb;
-    if (a.role === "headline" && b.role === "headline") return b.score - a.score;
-    if (a.role === "texture" && b.role === "texture") return a.score - b.score;
-    return b.score - a.score;
-  });
-
-  const placed: Placed[] = [];
+  const ranked = [...metas].sort((a, b) => b.score - a.score || a.idx - b.idx);
   const out: PosterWallLayout[] = new Array(n);
-  let seq = 0;
 
-  for (const m of orderPlace) {
-    const cell = cellByIdx.get(m.idx);
-    const ex = gridExtents(m.layoutSize, m.role);
-    let left: number;
-    let top: number;
-    if (cell) {
-      const base = cellCenter(cell.c, cell.r, ex, m.p.slug);
-      const jit = gridJitterPct(
-        m.p.slug,
-        m.idx + seq * 17,
-        ex,
-        cell.c,
-      );
-      left = base.left + jit.dx;
-      top = base.top + jit.dy;
-    } else {
-      left = wallContentMidpointPct(m.layoutSize);
-      top = (ex.topMin + ex.topMax) / 2;
-    }
-
-    const inC = inCenterTerritory(left, ex);
-    const sepMul =
-      m.role === "headline"
-        ? inC
-          ? 1.315
-          : 1.12
-        : m.role === "support"
-          ? inC
-            ? 1.145
-            : 1.03
-          : inC
-            ? 1.055
-            : 0.97;
-
-    const fin = relaxPlacement(
-      left,
-      top,
-      m.layoutSize,
-      placed,
-      m.role,
-      sepMul,
-      m.p.slug,
-      ex,
-    );
-    left = clampWallLeftPct(fin.left, m.layoutSize, m.role);
-    top = fin.top;
-
-    placed.push({
-      left,
-      top,
-      size: m.layoutSize,
-      role: m.role,
-      slug: m.p.slug,
-    });
-
-    const headlineOrder = metas
-      .filter((x) => x.role === "headline")
-      .sort((a, b) => b.score - a.score);
-    const rankH =
-      m.role === "headline"
-        ? headlineOrder.findIndex((x) => x.idx === m.idx)
-        : -1;
-    const zBase =
-      m.role === "headline"
-        ? 68 + Math.max(0, 12 - Math.max(0, rankH)) * 1.05
-        : m.role === "support"
-          ? 32 + Math.round(hash01(m.p.slug, 606 + seq) * 12)
-          : 12 + (seq % 5) + Math.round(hash01(m.p.slug, 999) * 5);
+  for (let s = 0; s < ranked.length; s++) {
+    const m = ranked[s]!;
+    const slot = slotForRank(s);
+    const ex = gridExtents(slot.size, m.role);
+    let left = slot.leftPct;
+    let top = slot.topPct;
+    left = clampWallLeftPct(left, slot.size, m.role);
+    top = Math.max(ex.topMin + 0.5, Math.min(ex.topMax - 0.5, top));
 
     out[m.idx] = {
-      topPct: Math.round(top * 10) / 10,
       leftPct: Math.round(left * 10) / 10,
-      width: widthForProjectSize(m.layoutSize),
-      zIndex: Math.min(80, Math.round(zBase)),
-      rotateDeg: gridRotateDeg(m.p.slug, m.role, seq + m.idx),
-      offsetXPx: Math.round(handOffsetPx(m.p.slug, seq, 0) * 0.55),
-      offsetYPx: Math.round(handOffsetPx(m.p.slug, seq, 1) * 0.55),
+      topPct: Math.round(top * 10) / 10,
+      width: widthForProjectSize(slot.size),
+      zIndex: Math.min(80, Math.max(0, Math.round(slot.zIndex))),
+      rotateDeg: Math.round(slot.rotateDeg * 100) / 100,
+      offsetXPx: Math.round(handOffsetPx(m.p.slug, s, 0) * 0.55),
+      offsetYPx: Math.round(handOffsetPx(m.p.slug, s, 1) * 0.55),
     };
-    seq++;
   }
 
   for (let i = 0; i < n; i++) {
     if (!out[i]) {
-      const m = byIdx.get(i)!;
+      const m = metas[i]!;
       const ex = gridExtents(m.layoutSize, m.role);
       out[i] = {
         topPct: Math.round(((ex.topMin + ex.topMax) / 2) * 10) / 10,
@@ -861,10 +491,4 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
   }
 
   return out;
-}
-
-function roleRank(r: WallRole): number {
-  if (r === "headline") return 0;
-  if (r === "support") return 1;
-  return 2;
 }
