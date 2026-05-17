@@ -472,7 +472,7 @@
   text-align: left;
   padding: 0.09rem 0.08rem;
   margin-bottom: 0.06rem;
-  color: rgba(26, 29, 33, 0.54);
+  color: rgba(26, 29, 33, 0.57);
   pointer-events: auto;
   transition: color 170ms ease;
 }
@@ -495,7 +495,7 @@
   font-weight: 400;
   letter-spacing: 0.052em;
   line-height: 1.12;
-  opacity: 0.48;
+  opacity: 0.51;
 }
 
 .bedroom-project-rail__year {
@@ -505,7 +505,7 @@
   font-size: 7.25px;
   letter-spacing: 0.115em;
   line-height: 1.12;
-  opacity: 0.46;
+  opacity: 0.49;
 }
 
 .bedroom-project-rail__title {
@@ -524,7 +524,7 @@
 
 /** Newest entries (year-desc order): marginally brighter for scan without “nav pills.” */
 .bedroom-project-rail__item:nth-child(-n + 12) {
-  color: rgba(24, 27, 31, 0.6);
+  color: rgba(24, 27, 31, 0.62);
 }
 
 .bedroom-project-rail__item:nth-child(-n + 12) .bedroom-project-rail__year {

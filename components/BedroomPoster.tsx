@@ -195,8 +195,8 @@ function BedroomPosterInner({
     !isDragging &&
     (railHoverActive || (pointerFine && thumbHover && !open));
 
-  const openScale = narrowViewport ? 1.34 : 1.72;
-  const openLiftPx = open ? (narrowViewport ? -14 : -24) : 0;
+  const openScale = narrowViewport ? 1.38 : 1.78;
+  const openLiftPx = open ? (narrowViewport ? -18 : -30) : 0;
   const passiveRecessed = wallDimmed && !open && !isDragging;
 
   /** Off-screen posters skip thumbnail decode until near viewport, rail, pointer hover, or open. */
@@ -920,13 +920,13 @@ function BedroomPosterInner({
         zIndex: isDragging
           ? 140
           : open
-            ? 132
+            ? 138
             : hoverStack
               ? 90
               : wallLayout.zIndex,
         transform: `translate(calc(-50% + ${wallLayout.offsetXPx}px), calc(-50% + ${wallLayout.offsetYPx}px + ${openLiftPx}px)) rotate(${wallLayout.rotateDeg}deg) scale(${open ? openScale : 1})`,
         filter: passiveRecessed
-          ? "brightness(0.42) saturate(0.62) contrast(0.94)"
+          ? "brightness(0.35) saturate(0.52) contrast(0.92)"
           : undefined,
         transition: isDragging
           ? "none"

@@ -339,7 +339,7 @@ export function BedroomWall({
           aria-hidden
           style={{
             background:
-              "radial-gradient(ellipse 95% 72% at 50% 38%, transparent 0%, rgba(14,16,20,0.18) 52%, rgba(8,10,14,0.48) 100%)",
+              "radial-gradient(ellipse 95% 72% at 50% 38%, transparent 0%, rgba(14,16,20,0.26) 52%, rgba(8,10,14,0.61) 100%)",
           }}
         />
       ) : null}
