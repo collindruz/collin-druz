@@ -243,7 +243,7 @@ export function BedroomWall({
       </button>
 
       <aside
-        className="bedroom-project-rail pointer-events-none absolute right-[2.2%] top-[2.5%] z-[110] hidden min-[821px]:block"
+        className="bedroom-project-rail pointer-events-none absolute right-[1.35%] top-[2.5%] z-[110] hidden min-[821px]:block"
         aria-label="Project index"
       >
         <div ref={stripRef} className="bedroom-project-rail__scroll">
