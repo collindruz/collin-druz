@@ -8,7 +8,11 @@ import {
   useState,
 } from "react";
 import { BedroomPoster } from "@/components/BedroomPoster";
-import type { PosterWallLayout } from "@/lib/bedroomWallLayout";
+import { WallLayoutDebugOverlay } from "@/components/WallLayoutDebugOverlay";
+import type {
+  PosterWallLayout,
+  WallDebugOverlay,
+} from "@/lib/bedroomWallLayout";
 import { CONTACT_EMAIL } from "@/lib/contact";
 import type { Project } from "@/lib/projects";
 
@@ -16,6 +20,8 @@ type Props = {
   projects: Project[];
   wallLayouts: PosterWallLayout[];
   projectsByYearDesc: Project[];
+  /** Dev-only; always `null` in production. */
+  wallLayoutDebug: WallDebugOverlay | null;
 };
 
 const PosterWallCell = memo(function PosterWallCell({
@@ -57,6 +63,7 @@ export function BedroomWall({
   projects,
   wallLayouts,
   projectsByYearDesc,
+  wallLayoutDebug,
 }: Props) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
   const [hoverSlug, setHoverSlug] = useState<string | null>(null);
@@ -342,6 +349,10 @@ export function BedroomWall({
               "radial-gradient(ellipse 95% 72% at 50% 38%, transparent 0%, rgba(14,16,20,0.26) 52%, rgba(8,10,14,0.61) 100%)",
           }}
         />
+      ) : null}
+
+      {wallLayoutDebug ? (
+        <WallLayoutDebugOverlay data={wallLayoutDebug} />
       ) : null}
 
       {projects.map((project, i) => (
