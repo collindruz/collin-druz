@@ -201,8 +201,11 @@ function BedroomPosterInner({
 
   /** Off-screen posters skip thumbnail decode until near viewport, rail, pointer hover, or open. */
   useLayoutEffect(() => {
+    const reveal = () => {
+      queueMicrotask(() => setThumbReveal(true));
+    };
     if (open || railHoverActive || thumbHover) {
-      setThumbReveal(true);
+      reveal();
       return;
     }
     if (thumbReveal) return;
@@ -220,12 +223,12 @@ function BedroomPosterInner({
       r.right > -margin &&
       r.left < vw + margin
     ) {
-      setThumbReveal(true);
+      reveal();
       return;
     }
 
     if (typeof IntersectionObserver === "undefined") {
-      setThumbReveal(true);
+      reveal();
       return;
     }
 
@@ -518,9 +521,11 @@ function BedroomPosterInner({
 
   useEffect(() => {
     if (!open) {
-      setPlaybackTime(0);
-      setPlaybackDuration(0);
-      setIsScrubbing(false);
+      queueMicrotask(() => {
+        setPlaybackTime(0);
+        setPlaybackDuration(0);
+        setIsScrubbing(false);
+      });
       return;
     }
 
@@ -879,20 +884,22 @@ function BedroomPosterInner({
       style={edgeStyle}
     >
       <div className="bedroom-closed-thumb-crop">
-        {/* eslint-disable-next-line @next/next/no-img-element -- native lazy load; avoid N× /_next/image optimizer calls on the wall */}
         {showClosedStill ? (
-          <img
-            src={stillUrl}
-            alt=""
-            width={480}
-            height={640}
-            className="bedroom-closed-thumb-crop__img absolute inset-0 h-full w-full opacity-100 saturate-[0.88] contrast-[0.94] [filter:saturate(0.88)_contrast(0.93)_brightness(1.02)]"
-            loading="lazy"
-            decoding="async"
-            fetchPriority="low"
-            draggable={false}
-            onDragStart={(e) => e.preventDefault()}
-          />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- native lazy load; avoid N× /_next/image optimizer calls on the wall */}
+            <img
+              src={stillUrl}
+              alt=""
+              width={480}
+              height={640}
+              className="bedroom-closed-thumb-crop__img absolute inset-0 h-full w-full opacity-100 saturate-[0.88] contrast-[0.94] [filter:saturate(0.88)_contrast(0.93)_brightness(1.02)]"
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
+            />
+          </>
         ) : null}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.14] mix-blend-multiply"
