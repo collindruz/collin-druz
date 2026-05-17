@@ -38,7 +38,8 @@ const SIZE_SEP_PCT: Record<ProjectSize, number> = {
 };
 
 function sepMin(a: ProjectSize, b: ProjectSize): number {
-  return (SIZE_SEP_PCT[a] + SIZE_SEP_PCT[b]) * 0.48;
+  /** ~≤50% overlap — base distance scale (was 0.48). */
+  return (SIZE_SEP_PCT[a] + SIZE_SEP_PCT[b]) * 0.505;
 }
 
 const PR_RANK: Record<ProjectPriority, number> = {
@@ -104,7 +105,7 @@ function railLeftEdgePct(): number {
 }
 
 function muralContentRightPct(): number {
-  return railLeftEdgePct() - UI_MARGIN_PCT - 0.28;
+  return railLeftEdgePct() - UI_MARGIN_PCT - 0.12;
 }
 
 function effectiveHalfWidthPct(size: ProjectSize): number {
@@ -249,11 +250,11 @@ function rotateDegFor(slug: string, k: number, role: WallRole): number {
  * Coordinates are legacy-centered; shiftFromLegacyViewportCenter applied when placing.
  */
 const ANCHOR_BY_SLUG: Record<string, { left: number; top: number }> = {
-  "sabrina-carpenter-taste": { left: 23.7, top: 21.8 },
-  "charlie-puth-thats-not-how-this-works": { left: 35.1, top: 37.9 },
-  "doja-cat-agora-hills": { left: 51.1, top: 34.6 },
-  "lil-dicky-hahaha-i-love-myself": { left: 63.4, top: 22 },
-  "le-sserafim-easy": { left: 75.8, top: 19.4 },
+  "sabrina-carpenter-taste": { left: 22.5, top: 21.5 },
+  "charlie-puth-thats-not-how-this-works": { left: 33.9, top: 38.2 },
+  "doja-cat-agora-hills": { left: 52.5, top: 34.9 },
+  "lil-dicky-hahaha-i-love-myself": { left: 64.8, top: 22.2 },
+  "le-sserafim-easy": { left: 76.6, top: 19.2 },
 };
 
 function anchorBand(slug: string): { min: number; max: number } {
@@ -261,23 +262,23 @@ function anchorBand(slug: string): { min: number; max: number } {
     slug === "charlie-puth-thats-not-how-this-works" ||
     slug === "doja-cat-agora-hills"
   ) {
-    return { min: 31.5, max: 45 };
+    return { min: 31.2, max: 45.4 };
   }
-  return { min: 16.5, max: 29.5 };
+  return { min: 16.2, max: 30 };
 }
 
 /** Second row — wider footprint; uneven tops for hand-placed rhythm. */
 const EXTRA_PIN_ROW: Array<{ left: number; top: number }> = [
-  { left: 27.6, top: 30.2 },
-  { left: 39.5, top: 28.1 },
-  { left: 54.6, top: 30 },
-  { left: 67.6, top: 28.6 },
-  { left: 33.4, top: 34 },
-  { left: 46.8, top: 32.6 },
-  { left: 60.6, top: 33.5 },
-  { left: 72.5, top: 31.1 },
-  { left: 41.1, top: 36.2 },
-  { left: 57.6, top: 35.2 },
+  { left: 26.8, top: 30.1 },
+  { left: 38.8, top: 27.9 },
+  { left: 55.4, top: 29.9 },
+  { left: 68.4, top: 28.5 },
+  { left: 32.6, top: 33.9 },
+  { left: 46.2, top: 32.5 },
+  { left: 61.2, top: 33.4 },
+  { left: 73.2, top: 31 },
+  { left: 40.4, top: 36.1 },
+  { left: 58.2, top: 35.1 },
 ];
 
 type Placed = {
@@ -288,17 +289,17 @@ type Placed = {
   slug: string;
 };
 
-/** Physical stacking — refined: ~12% more air; heroes stay readable; scraps don’t bury pins. */
+/** Physical stacking — caps deep bury; textures peel off anchors. */
 function roleSepMul(a: WallRole, b: WallRole): number {
-  if (a === "headline" && b === "headline") return 1.69;
+  if (a === "headline" && b === "headline") return 1.78;
   if (
     (a === "support" && b === "headline") ||
     (a === "headline" && b === "support")
   ) {
-    return 0.98;
+    return 1.06;
   }
-  if (a === "texture" && b === "texture") return 0.74;
-  if (a === "texture" || b === "texture") return 0.87;
+  if (a === "texture" && b === "texture") return 0.72;
+  if (a === "texture" || b === "texture") return 0.96;
   return 1.05;
 }
 
@@ -313,7 +314,7 @@ function minSepOk(
   for (const q of placed) {
     let need = sepMin(size, q.size) * sepMul;
     need *= roleSepMul(role, q.role);
-    const dx = (left - q.left) * 0.935;
+    const dx = (left - q.left) * 0.905;
     const dy = top - q.top;
     if (dx * dx + dy * dy < need * need) return false;
   }
@@ -362,12 +363,12 @@ function finalizeWallPosition(
   return { left: L, top: T };
 }
 
-/** Asymmetric voids — name + index; lighter center-right pocket so mass isn’t a blob. */
+/** Light asymmetry only — strong pockets caused accidental empty voids. */
 function boardBreathing(left: number, top: number, slug: string): { dl: number; dt: number } {
-  if (hash01(slug, 988) < 0.16) return { dl: 0, dt: 0 };
+  if (hash01(slug, 988) < 0.21) return { dl: 0, dt: 0 };
   const pockets = [
-    { lx: 11.8, ly: 17, r: 11, push: 5 },
-    { lx: 63, ly: 40, r: 9, push: 2.15 },
+    { lx: 11.8, ly: 17, r: 8, push: 2.35 },
+    { lx: 61, ly: 41, r: 7.2, push: 1.15 },
   ];
   let dl = 0;
   let dt = 0;
@@ -443,7 +444,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     headlineIdx.add(row.idx);
   }
 
-  const textureCut = byScoreDesc[Math.floor(n * 0.48)]?.score ?? -Infinity;
+  const textureCut = byScoreDesc[Math.floor(n * 0.5)]?.score ?? -Infinity;
   const isTexture = (idx: number) => {
     const row = scored.find((x) => x.idx === idx)!;
     return !headlineIdx.has(idx) && row.score < textureCut;
@@ -488,7 +489,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     band: { min: number; max: number },
   ) => {
     const slug = m.p.slug;
-    const sepMul = 1.9;
+    const sepMul = 1.98;
     let left =
       baseLeft +
       (hash01(slug, 2) - 0.5) * 3.15 +
@@ -531,7 +532,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
 
     placed.push({ left, top, size: m.layoutSize, role: "headline", slug });
     const rankH = headlineMetas.findIndex((h) => h.idx === m.idx);
-    const zBase = 66 + Math.max(0, 14 - rankH) * 1.12;
+    const zBase = 68 + Math.max(0, 14 - rankH) * 1.12;
     out[m.idx] = {
       topPct: Math.round(top * 10) / 10,
       leftPct: Math.round(left * 10) / 10,
@@ -585,13 +586,13 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
   for (const m of supportList) {
     const slug = m.p.slug;
     const t = sI / supportN;
-    const lo = UI_MARGIN_PCT + hwPad(m.layoutSize) * 0.22;
-    const hi = muralContentRightPct() - 5.75;
+    const lo = UI_MARGIN_PCT + hwPad(m.layoutSize) * 0.18;
+    const hi = muralContentRightPct() - 5.55;
     let idealLeft =
       lo +
-      t * (hi - lo) * 0.995 +
-      (t - 0.5) * 5.4 +
-      Math.sin(t * Math.PI) * 5.5 +
+      t * (hi - lo) * 0.998 +
+      (t - 0.5) * 6.15 +
+      Math.sin(t * Math.PI) * 5.2 +
       (hash01(slug, 301 + sI) - 0.5) * 9.5 +
       (hash01(slug, 304 + sI) - 0.5) * 2.35;
     const edgeDrift = (hash01(slug, 307 + sI) - 0.5) * 6.2;
@@ -599,20 +600,21 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     const edgeKick =
       edgeBand < 0.38 ? -0.85 : edgeBand > 0.62 ? 0.82 : 0.15;
     let idealTop =
-      39.2 +
-      Math.sin(t * Math.PI * 2.1 + hash01(slug, 303) * 2) * 8.25 +
-      (1 - Math.abs(t - 0.48)) * 3.35 -
+      39 +
+      Math.sin(t * Math.PI * 2.1 + hash01(slug, 303) * 2) * 8.45 +
+      (1 - Math.abs(t - 0.48)) * 2.85 +
+      (t - 0.5) * 4.95 -
       (hash01(slug, 302 + sI) - 0.5) * 5.6 +
       edgeDrift * edgeKick;
 
     const skew = manualSkew(slug, sI);
-    idealLeft += skew.dl * 0.63;
-    idealTop += skew.dt * 0.63;
+    idealLeft += skew.dl * 0.68;
+    idealTop += skew.dt * 0.68;
     const br = boardBreathing(idealLeft, idealTop, slug);
-    idealLeft += br.dl * 0.85;
-    idealTop += br.dt * 0.85;
+    idealLeft += br.dl * 0.62;
+    idealTop += br.dt * 0.62;
 
-    idealLeft -= Math.max(0, idealLeft - (muralContentRightPct() - 15.1)) * 0.4;
+    idealLeft -= Math.max(0, idealLeft - (muralContentRightPct() - 14.95)) * 0.38;
     idealLeft = clampWallLeftPct(idealLeft, m.layoutSize, "support");
     idealTop = Math.max(35.5, Math.min(59, idealTop));
 
@@ -642,7 +644,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       );
       left = fin.left;
       top = fin.top;
-      if (!minSepOk(left, top, m.layoutSize, placed, sepMul * 0.9, "support"))
+      if (!minSepOk(left, top, m.layoutSize, placed, sepMul * 0.92, "support"))
         continue;
       placed.push({ left, top, size: m.layoutSize, role: "support", slug });
       const z =
@@ -712,42 +714,52 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     let idealLeft: number;
     let idealTop: number;
 
-    if (roll < 0.3) {
+    if (roll < 0.28) {
       idealTop = 13.8 + hash01(slug, 901) * 10;
       idealLeft =
         UI_MARGIN_PCT +
         4.5 +
         hash01(slug, 902) * (muralContentRightPct() * 0.46);
-    } else if (roll > 0.7) {
+    } else if (roll > 0.72) {
       idealTop = 62 + hash01(slug, 903) * 24;
       idealLeft =
         UI_MARGIN_PCT +
         hash01(slug, 904) * (muralContentRightPct() - 16.4);
     } else if (roll < 0.49) {
-      idealLeft = UI_MARGIN_PCT + 3 + hash01(slug, 905) * 13;
-      idealTop =
-        hash01(slug, 906) < 0.42
-          ? 16 + hash01(slug, 909) * 15
-          : 58 + hash01(slug, 930) * 26;
+      if (hash01(slug, 2920 + texI) < 0.34) {
+        idealLeft = 33 + hash01(slug, 2921 + texI) * 26;
+        idealTop = 27 + hash01(slug, 2922 + texI) * 17;
+      } else {
+        idealLeft = UI_MARGIN_PCT + 3 + hash01(slug, 905) * 13;
+        idealTop =
+          hash01(slug, 906) < 0.42
+            ? 16 + hash01(slug, 909) * 15
+            : 58 + hash01(slug, 930) * 26;
+      }
     } else {
-      idealLeft =
-        muralContentRightPct() - 15.1 - hash01(slug, 907) * 15;
-      idealTop =
-        hash01(slug, 908) < 0.42
-          ? 15 + hash01(slug, 911) * 14
-          : 57 + hash01(slug, 931) * 27;
+      if (hash01(slug, 2923 + texI) < 0.32) {
+        idealLeft = 43 + hash01(slug, 2924 + texI) * 20;
+        idealTop = 33 + hash01(slug, 2925 + texI) * 15;
+      } else {
+        idealLeft =
+          muralContentRightPct() - 15.1 - hash01(slug, 907) * 15;
+        idealTop =
+          hash01(slug, 908) < 0.42
+            ? 15 + hash01(slug, 911) * 14
+            : 57 + hash01(slug, 931) * 27;
+      }
     }
 
     const skew = manualSkew(slug, texI + 2000);
     idealLeft += skew.dl * 0.52;
     idealTop += skew.dt * 0.52;
     const br = boardBreathing(idealLeft, idealTop, slug);
-    idealLeft += br.dl * 0.7;
-    idealTop += br.dt * 0.7;
+    idealLeft += br.dl * 0.55;
+    idealTop += br.dt * 0.55;
     idealLeft = clampWallLeftPct(idealLeft, m.layoutSize, "texture");
     idealTop = Math.max(11, Math.min(90, idealTop));
 
-    const sepMul = 0.63;
+    const sepMul = 0.59;
     let placedOne = false;
     for (let attempt = 0; attempt < 82 && !placedOne; attempt++) {
       let left =
@@ -773,7 +785,7 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
       );
       left = fin.left;
       top = fin.top;
-      if (!minSepOk(left, top, m.layoutSize, placed, sepMul * 0.86, "texture"))
+      if (!minSepOk(left, top, m.layoutSize, placed, sepMul * 0.89, "texture"))
         continue;
       placed.push({ left, top, size: m.layoutSize, role: "texture", slug });
       out[m.idx] = {
