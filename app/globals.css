@@ -602,6 +602,43 @@
   opacity: 0.58;
 }
 
+.bedroom-project-rail__item.is-filter-match {
+  color: rgba(12, 15, 19, 0.86);
+}
+
+.bedroom-project-rail__item.is-filter-match .bedroom-project-rail__title {
+  font-weight: 500;
+}
+
+.bedroom-project-rail__item.is-filter-match .bedroom-project-rail__year {
+  opacity: 0.58;
+}
+
+.bedroom-project-rail__item.is-filter-match .bedroom-project-rail__director {
+  opacity: 0.56;
+}
+
+.bedroom-project-rail__item.is-filter-receded {
+  color: rgba(26, 29, 33, 0.34);
+}
+
+.bedroom-project-rail__item.is-filter-receded .bedroom-project-rail__year {
+  opacity: 0.32;
+}
+
+.bedroom-project-rail__item.is-filter-receded .bedroom-project-rail__director {
+  opacity: 0.3;
+}
+
+.bedroom-project-rail__item.is-filter-receded .bedroom-project-rail__title {
+  text-shadow: none;
+}
+
+.bedroom-project-rail__item.is-filter-match.is-active,
+.bedroom-project-rail__item.is-filter-receded.is-active {
+  color: rgba(14, 17, 21, 0.9);
+}
+
 .analog-cursor-active,
 .analog-cursor-active * {
   cursor: none !important;
@@ -857,6 +894,27 @@
 
   .bedroom-mobile-sheet__item.is-active .bedroom-mobile-sheet__director {
     color: rgba(38, 41, 46, 0.56);
+  }
+
+  .bedroom-mobile-sheet__item.is-filter-match {
+    color: rgba(12, 15, 19, 0.84);
+  }
+
+  .bedroom-mobile-sheet__item.is-filter-match .bedroom-mobile-sheet__title {
+    font-weight: 500;
+  }
+
+  .bedroom-mobile-sheet__item.is-filter-receded {
+    color: rgba(26, 29, 33, 0.36);
+  }
+
+  .bedroom-mobile-sheet__item.is-filter-receded .bedroom-mobile-sheet__title {
+    color: rgba(26, 29, 33, 0.36);
+  }
+
+  .bedroom-mobile-sheet__item.is-filter-receded .bedroom-mobile-sheet__year,
+  .bedroom-mobile-sheet__item.is-filter-receded .bedroom-mobile-sheet__director {
+    color: rgba(38, 41, 46, 0.34);
   }
 
   .bedroom-mobile-sheet__item:active {

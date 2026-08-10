@@ -4,7 +4,6 @@ import {
   memo,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -17,11 +16,26 @@ import type {
 } from "@/lib/bedroomWallLayout";
 import { CONTACT_EMAIL } from "@/lib/contact";
 import {
-  getProjectFilterCategory,
   projectMatchesWallFilter,
   type Project,
   type ProjectWallFilter,
 } from "@/lib/projects";
+
+function indexFilterClass(
+  project: Project,
+  wallFilter: ProjectWallFilter,
+  activeSlug: string | null,
+): string {
+  const parts: string[] = [];
+  if (activeSlug === project.slug) parts.push("is-active");
+  if (wallFilter === "all") return parts.join(" ");
+  parts.push(
+    projectMatchesWallFilter(project, wallFilter)
+      ? "is-filter-match"
+      : "is-filter-receded",
+  );
+  return parts.join(" ");
+}
 
 type Props = {
   projects: Project[];
@@ -38,7 +52,7 @@ const PosterWallCell = memo(function PosterWallCell({
   wallDimmed,
   railHoverActive,
   pointerFine,
-  filterHidden,
+  filterReceded,
   onTogglePoster,
 }: {
   project: Project;
@@ -47,7 +61,7 @@ const PosterWallCell = memo(function PosterWallCell({
   wallDimmed: boolean;
   railHoverActive: boolean;
   pointerFine: boolean;
-  filterHidden: boolean;
+  filterReceded: boolean;
   onTogglePoster: (slug: string) => void;
 }) {
   const onToggle = useCallback(() => {
@@ -62,7 +76,7 @@ const PosterWallCell = memo(function PosterWallCell({
       wallDimmed={wallDimmed}
       railHoverActive={railHoverActive}
       pointerFine={pointerFine}
-      filterHidden={filterHidden}
+      filterReceded={filterReceded}
       onToggle={onToggle}
     />
   );
@@ -125,35 +139,42 @@ export function BedroomWall({
     mobileSheetOpenRef.current = mobileSheetOpen;
   }, [mobileSheetOpen]);
 
-  const onTogglePoster = useCallback((slug: string) => {
-    setOpenSlug((cur) => (cur === slug ? null : slug));
-  }, []);
-
-  const pickFromSheet = useCallback((slug: string) => {
-    setOpenSlug((cur) => (cur === slug ? null : slug));
-    setMobileSheetOpen(false);
-  }, []);
-
-  const onSelectWallFilter = useCallback(
-    (next: ProjectWallFilter) => {
-      if (next !== "all" && openSlug) {
-        const openProject = projects.find((project) => project.slug === openSlug);
-        if (
-          openProject &&
-          getProjectFilterCategory(openProject) !== next
-        ) {
-          setOpenSlug(null);
+  const onTogglePoster = useCallback(
+    (slug: string) => {
+      setOpenSlug((cur) => {
+        if (cur === slug) return null;
+        if (wallFilter !== "all") {
+          const project = projects.find((entry) => entry.slug === slug);
+          if (project && !projectMatchesWallFilter(project, wallFilter)) {
+            setWallFilter("all");
+          }
         }
-      }
-      setWallFilter(next);
+        return slug;
+      });
     },
-    [openSlug, projects],
+    [wallFilter, projects],
   );
 
-  const indexProjects = useMemo(
-    () => projectsByYearDesc.filter((project) => projectMatchesWallFilter(project, wallFilter)),
-    [projectsByYearDesc, wallFilter],
+  const pickFromSheet = useCallback(
+    (slug: string) => {
+      setOpenSlug((cur) => {
+        if (cur === slug) return null;
+        if (wallFilter !== "all") {
+          const project = projects.find((entry) => entry.slug === slug);
+          if (project && !projectMatchesWallFilter(project, wallFilter)) {
+            setWallFilter("all");
+          }
+        }
+        return slug;
+      });
+      setMobileSheetOpen(false);
+    },
+    [wallFilter, projects],
   );
+
+  const onSelectWallFilter = useCallback((next: ProjectWallFilter) => {
+    setWallFilter(next);
+  }, []);
 
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
@@ -326,12 +347,12 @@ export function BedroomWall({
           className="bedroom-project-rail__filters"
         />
         <div ref={stripRef} className="bedroom-project-rail__scroll">
-          {indexProjects.map((project) => (
+          {projectsByYearDesc.map((project) => (
             <button
               key={project.slug}
               type="button"
               data-video-slug={project.slug}
-              className={`bedroom-project-rail__item ${openSlug === project.slug ? "is-active" : ""}`}
+              className={`bedroom-project-rail__item ${indexFilterClass(project, wallFilter, openSlug)}`}
               onClick={() => onTogglePoster(project.slug)}
               onMouseEnter={() => setHoverSlug(project.slug)}
               onMouseLeave={() => setHoverSlug((cur) => (cur === project.slug ? null : cur))}
@@ -391,12 +412,12 @@ export function BedroomWall({
             </button>
           </div>
           <div className="bedroom-mobile-sheet__scroll">
-            {indexProjects.map((project) => (
+            {projectsByYearDesc.map((project) => (
               <button
                 key={`sheet-${project.slug}`}
                 type="button"
                 data-video-slug={project.slug}
-                className={`bedroom-mobile-sheet__item ${openSlug === project.slug ? "is-active" : ""}`}
+                className={`bedroom-mobile-sheet__item ${indexFilterClass(project, wallFilter, openSlug)}`}
                 onClick={() => pickFromSheet(project.slug)}
               >
                 <span className="bedroom-mobile-sheet__year">{project.year}</span>
@@ -430,7 +451,9 @@ export function BedroomWall({
       ) : null}
 
       {projects.map((project, i) => {
-        const filterHidden = !projectMatchesWallFilter(project, wallFilter);
+        const filterReceded =
+          wallFilter !== "all" &&
+          !projectMatchesWallFilter(project, wallFilter);
         return (
           <PosterWallCell
             key={project.slug}
@@ -440,7 +463,7 @@ export function BedroomWall({
             wallDimmed={openSlug !== null && openSlug !== project.slug}
             railHoverActive={railHoverBoost && hoverSlug === project.slug}
             pointerFine={!coarsePointer}
-            filterHidden={filterHidden}
+            filterReceded={filterReceded}
             onTogglePoster={onTogglePoster}
           />
         );
