@@ -13,13 +13,22 @@ import { projects } from "@/lib/projects";
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  const wallLayouts = computeWallLayouts(projects);
+  const allLayouts = computeWallLayouts(projects);
+  const layoutBySlug = new Map(
+    projects.map((project, index) => [project.slug, allLayouts[index]!]),
+  );
+  const wallProjects = projects.filter(
+    (project) => project.archivalStamp !== "NEEDS_VIDEO",
+  );
+  const wallLayouts = wallProjects.map(
+    (project) => layoutBySlug.get(project.slug)!,
+  );
   const projectsByYearDesc = sortProjectsByYearDesc(projects);
-  const wallLayoutDebug = getWallDebugOverlayData(projects, wallLayouts);
+  const wallLayoutDebug = getWallDebugOverlayData(wallProjects, wallLayouts);
 
   return (
     <BedroomWall
-      projects={projects}
+      projects={wallProjects}
       wallLayouts={wallLayouts}
       projectsByYearDesc={projectsByYearDesc}
       wallLayoutDebug={wallLayoutDebug}

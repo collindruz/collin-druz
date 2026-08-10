@@ -239,6 +239,11 @@ const MANUAL_BOARD_SLOTS: ManualBoardSlot[] = [
   { leftPct: 45, topPct: 72, size: "sm", rotateDeg: -0.08, zIndex: 20 },
   { leftPct: 64, topPct: 72.4, size: "sm", rotateDeg: 0.16, zIndex: 19 },
   { leftPct: 40, topPct: 75.8, size: "sm", rotateDeg: 0.04, zIndex: 18 },
+  /* Appended overflow — verified-video additions (do not edit slots 0–41). */
+  { leftPct: 7.5, topPct: 73.6, size: "sm", rotateDeg: 0.11, zIndex: 17 },
+  { leftPct: 52.5, topPct: 73.8, size: "sm", rotateDeg: -0.09, zIndex: 16 },
+  { leftPct: 74.5, topPct: 73.5, size: "sm", rotateDeg: 0.13, zIndex: 15 },
+  { leftPct: 30.5, topPct: 75.2, size: "sm", rotateDeg: -0.07, zIndex: 14 },
 ];
 
 function overflowBoardSlot(rank: number): ManualBoardSlot {
@@ -452,9 +457,27 @@ const WALL_OVERFLOW_SLOT_SLUGS = [
   "jean-dawson-sick-of-it",
   "jean-dawson-pirate-radio",
   "jean-dawson-three-heads",
+  "drake-plot-twist",
+  "offset-jid-bodies",
+  "jesse-jo-stark-who-knew",
+  "megan-thee-stallion-bigger-in-texas",
+  "spotify-live-room-series-2026",
+  "nike-hoops-hotline-la",
+  "urban-decay-campaign-1",
+  "urban-decay-campaign-2",
+  "martin-reunion-promo",
+  "spotify-frequency-amorphous",
+  "spotify-frequency-yung-baby-tate",
+  "google-samsung-galaxy-z-fold3-flip3",
+  "tmobile-team-anthony-anderson-vs-team-mama",
+  "tmobile-costume-party",
+  "barefoot-wine-mindy-kaling-campaign",
+  "lennon-commercial",
 ] as const;
 
-const WALL_OVERFLOW_SLOT_RANKS = [39, 40, 41] as const;
+const WALL_OVERFLOW_SLOT_RANKS = [
+  39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+] as const;
 
 function assignWallLayoutFromSlot(
   m: WallMeta,
