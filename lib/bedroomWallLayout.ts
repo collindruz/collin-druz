@@ -447,6 +447,37 @@ export function getWallDebugOverlayData(
   return { territory, grid: { verticalsPct, horizontalsPct }, posters };
 }
 
+/** New additions — pinned to unused manual slots so the existing board does not reshuffle. */
+const WALL_OVERFLOW_SLOT_SLUGS = [
+  "jean-dawson-sick-of-it",
+  "jean-dawson-pirate-radio",
+  "jean-dawson-three-heads",
+] as const;
+
+const WALL_OVERFLOW_SLOT_RANKS = [39, 40, 41] as const;
+
+function assignWallLayoutFromSlot(
+  m: WallMeta,
+  slotRank: number,
+  seq: number,
+): PosterWallLayout {
+  const slot = slotForRank(slotRank);
+  const ex = gridExtents(slot.size, m.role);
+  let left = slot.leftPct;
+  let top = slot.topPct;
+  left = clampWallLeftPct(left, slot.size, m.role);
+  top = Math.max(ex.topMin + 0.5, Math.min(ex.topMax - 0.5, top));
+  return {
+    leftPct: Math.round(left * 10) / 10,
+    topPct: Math.round(top * 10) / 10,
+    width: widthForProjectSize(slot.size),
+    zIndex: Math.min(80, Math.max(0, Math.round(slot.zIndex))),
+    rotateDeg: Math.round(slot.rotateDeg * 100) / 100,
+    offsetXPx: Math.round(handOffsetPx(m.p.slug, seq, 0) * 0.55),
+    offsetYPx: Math.round(handOffsetPx(m.p.slug, seq, 1) * 0.55),
+  };
+}
+
 /** Pairwise exchanges: only these slugs trade their computed slot layout (position, size, z, tilt, hand offsets). */
 const WALL_LAYOUT_SLUG_SWAPS: [string, string][] = [
   ["sabrina-carpenter-tears", "charlie-puth-thats-not-how-this-works"],
@@ -472,27 +503,23 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
   if (n === 0) return [];
 
   const metas = buildMetasForWall(projects);
-  const ranked = [...metas].sort((a, b) => b.score - a.score || a.idx - b.idx);
+  const overflowSet = new Set<string>(WALL_OVERFLOW_SLOT_SLUGS);
+  const ranked = [...metas]
+    .filter((m) => !overflowSet.has(m.p.slug))
+    .sort((a, b) => b.score - a.score || a.idx - b.idx);
   const out: PosterWallLayout[] = new Array(n);
 
   for (let s = 0; s < ranked.length; s++) {
     const m = ranked[s]!;
-    const slot = slotForRank(s);
-    const ex = gridExtents(slot.size, m.role);
-    let left = slot.leftPct;
-    let top = slot.topPct;
-    left = clampWallLeftPct(left, slot.size, m.role);
-    top = Math.max(ex.topMin + 0.5, Math.min(ex.topMax - 0.5, top));
+    out[m.idx] = assignWallLayoutFromSlot(m, s, s);
+  }
 
-    out[m.idx] = {
-      leftPct: Math.round(left * 10) / 10,
-      topPct: Math.round(top * 10) / 10,
-      width: widthForProjectSize(slot.size),
-      zIndex: Math.min(80, Math.max(0, Math.round(slot.zIndex))),
-      rotateDeg: Math.round(slot.rotateDeg * 100) / 100,
-      offsetXPx: Math.round(handOffsetPx(m.p.slug, s, 0) * 0.55),
-      offsetYPx: Math.round(handOffsetPx(m.p.slug, s, 1) * 0.55),
-    };
+  for (let i = 0; i < WALL_OVERFLOW_SLOT_SLUGS.length; i++) {
+    const slug = WALL_OVERFLOW_SLOT_SLUGS[i]!;
+    const rank = WALL_OVERFLOW_SLOT_RANKS[i]!;
+    const m = metas.find((x) => x.p.slug === slug);
+    if (!m) continue;
+    out[m.idx] = assignWallLayoutFromSlot(m, rank, ranked.length + i);
   }
 
   for (let i = 0; i < n; i++) {
