@@ -439,7 +439,7 @@
 }
 
 .bedroom-project-rail__scroll {
-  height: 100%;
+  height: calc(100% - 2.15rem);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -460,6 +460,51 @@
 .bedroom-project-rail__scroll::-webkit-scrollbar-thumb {
   background: rgba(32, 34, 39, 0.24);
   border-radius: 999px;
+}
+
+.bedroom-project-rail__filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.28rem 0.52rem;
+  margin-bottom: 0.58rem;
+  padding-right: 0.1rem;
+  pointer-events: auto;
+}
+
+.bedroom-project-rail__filter {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 6.75px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: rgba(26, 29, 33, 0.3);
+  cursor: pointer;
+  transition: color 170ms ease, opacity 170ms ease;
+}
+
+.bedroom-project-rail__filter.is-active {
+  color: rgba(12, 15, 19, 0.84);
+}
+
+.bedroom-project-rail__filter:hover,
+.bedroom-project-rail__filter:focus-visible {
+  color: rgba(18, 21, 25, 0.58);
+  outline: none;
+}
+
+.bedroom-mobile-sheet__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.15rem;
 }
 
 .bedroom-project-rail__item {
@@ -567,7 +612,7 @@
   left: 0;
   top: 0;
   pointer-events: none;
-  z-index: 130;
+  z-index: 2147483000;
   opacity: 0;
   transform: translate3d(-100px, -100px, 0);
   transition: opacity 200ms ease;

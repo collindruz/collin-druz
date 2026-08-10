@@ -12,9 +12,8 @@ export type ProjectPriority = "hero" | "large" | "standard" | "small";
 
 export type ProjectSize = "xl" | "lg" | "md" | "sm";
 
-/** Neutral placeholder for résumé entries awaiting a verified public video URL. */
-const NEEDS_VIDEO_THUMB =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='360'%3E%3Crect fill='%23c5c8c2' width='480' height='360'/%3E%3C/svg%3E";
+/** Wall/index filter lens — ALL · MUSIC VIDEO · COMMERCIAL / BRANDED. */
+export type ProjectFilterCategory = "music-video" | "commercial-branded";
 
 export type Project = {
   slug: string;
@@ -22,6 +21,8 @@ export type Project = {
   archivalStamp?: string;
   title: string; 
   category: ProjectCategory;
+  /** Optional override; otherwise derived from `category` via `getProjectFilterCategory`. */
+  filterCategory?: ProjectFilterCategory;
   year: string;
   role: string;
   client: string;
@@ -42,6 +43,42 @@ export type Project = {
   priority: ProjectPriority;
   size: ProjectSize;
 };
+
+/** Neutral placeholder for résumé entries awaiting a verified public video URL. */
+const NEEDS_VIDEO_THUMB =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='360'%3E%3Crect fill='%23c5c8c2' width='480' height='360'/%3E%3C/svg%3E";
+
+/**
+ * Maps display taxonomy to the board filter lens.
+ * Narrative short-films tied to music releases count as music-video.
+ */
+export function getProjectFilterCategory(
+  project: Project,
+): ProjectFilterCategory {
+  if (project.filterCategory) return project.filterCategory;
+  switch (project.category) {
+    case "Commercials":
+    case "Live / Rollouts":
+      return "commercial-branded";
+    case "Music Videos":
+    case "Narrative":
+      return "music-video";
+    case "Development":
+      return "commercial-branded";
+    default:
+      return "music-video";
+  }
+}
+
+export type ProjectWallFilter = "all" | ProjectFilterCategory;
+
+export function projectMatchesWallFilter(
+  project: Project,
+  filter: ProjectWallFilter,
+): boolean {
+  if (filter === "all") return true;
+  return getProjectFilterCategory(project) === filter;
+}
 
 /**
  * Curated wall + archive from collindruz.com and additional reels (Apr 2026).

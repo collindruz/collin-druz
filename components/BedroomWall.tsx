@@ -4,9 +4,11 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { BedroomPoster } from "@/components/BedroomPoster";
 import { WallLayoutDebugOverlay } from "@/components/WallLayoutDebugOverlay";
 import type {
@@ -14,7 +16,12 @@ import type {
   WallDebugOverlay,
 } from "@/lib/bedroomWallLayout";
 import { CONTACT_EMAIL } from "@/lib/contact";
-import type { Project } from "@/lib/projects";
+import {
+  getProjectFilterCategory,
+  projectMatchesWallFilter,
+  type Project,
+  type ProjectWallFilter,
+} from "@/lib/projects";
 
 type Props = {
   projects: Project[];
@@ -31,6 +38,7 @@ const PosterWallCell = memo(function PosterWallCell({
   wallDimmed,
   railHoverActive,
   pointerFine,
+  filterHidden,
   onTogglePoster,
 }: {
   project: Project;
@@ -39,6 +47,7 @@ const PosterWallCell = memo(function PosterWallCell({
   wallDimmed: boolean;
   railHoverActive: boolean;
   pointerFine: boolean;
+  filterHidden: boolean;
   onTogglePoster: (slug: string) => void;
 }) {
   const onToggle = useCallback(() => {
@@ -53,11 +62,44 @@ const PosterWallCell = memo(function PosterWallCell({
       wallDimmed={wallDimmed}
       railHoverActive={railHoverActive}
       pointerFine={pointerFine}
+      filterHidden={filterHidden}
       onToggle={onToggle}
     />
   );
 });
 PosterWallCell.displayName = "PosterWallCell";
+
+const WALL_FILTER_OPTIONS: { id: ProjectWallFilter; label: string }[] = [
+  { id: "all", label: "ALL" },
+  { id: "music-video", label: "MUSIC VIDEO" },
+  { id: "commercial-branded", label: "COMMERCIAL / BRANDED" },
+];
+
+function ProjectIndexFilters({
+  wallFilter,
+  onSelectFilter,
+  className,
+}: {
+  wallFilter: ProjectWallFilter;
+  onSelectFilter: (filter: ProjectWallFilter) => void;
+  className?: string;
+}) {
+  return (
+    <div className={className} role="group" aria-label="Project category">
+      {WALL_FILTER_OPTIONS.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          className={`bedroom-project-rail__filter ${wallFilter === option.id ? "is-active" : ""}`}
+          aria-pressed={wallFilter === option.id}
+          onClick={() => onSelectFilter(option.id)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function BedroomWall({
   projects,
@@ -74,6 +116,7 @@ export function BedroomWall({
   const [cursorActive, setCursorActive] = useState(false);
   const [cursorEnabled, setCursorEnabled] = useState(false);
   const [cursorOverImage, setCursorOverImage] = useState(false);
+  const [wallFilter, setWallFilter] = useState<ProjectWallFilter>("all");
   const mailHref = `mailto:${CONTACT_EMAIL}`;
   const stripRef = useRef<HTMLDivElement>(null);
   const mobileSheetOpenRef = useRef(false);
@@ -90,6 +133,27 @@ export function BedroomWall({
     setOpenSlug((cur) => (cur === slug ? null : slug));
     setMobileSheetOpen(false);
   }, []);
+
+  const onSelectWallFilter = useCallback(
+    (next: ProjectWallFilter) => {
+      if (next !== "all" && openSlug) {
+        const openProject = projects.find((project) => project.slug === openSlug);
+        if (
+          openProject &&
+          getProjectFilterCategory(openProject) !== next
+        ) {
+          setOpenSlug(null);
+        }
+      }
+      setWallFilter(next);
+    },
+    [openSlug, projects],
+  );
+
+  const indexProjects = useMemo(
+    () => projectsByYearDesc.filter((project) => projectMatchesWallFilter(project, wallFilter)),
+    [projectsByYearDesc, wallFilter],
+  );
 
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
@@ -256,8 +320,13 @@ export function BedroomWall({
         className="bedroom-project-rail pointer-events-none absolute right-[1.35%] top-[2.5%] z-[110] hidden min-[821px]:block"
         aria-label="Project index"
       >
+        <ProjectIndexFilters
+          wallFilter={wallFilter}
+          onSelectFilter={onSelectWallFilter}
+          className="bedroom-project-rail__filters"
+        />
         <div ref={stripRef} className="bedroom-project-rail__scroll">
-          {projectsByYearDesc.map((project) => (
+          {indexProjects.map((project) => (
             <button
               key={project.slug}
               type="button"
@@ -307,6 +376,11 @@ export function BedroomWall({
         >
           <div className="bedroom-mobile-sheet__header">
             <p className="bedroom-mobile-sheet__title">Index</p>
+            <ProjectIndexFilters
+              wallFilter={wallFilter}
+              onSelectFilter={onSelectWallFilter}
+              className="bedroom-mobile-sheet__filters"
+            />
             <button
               type="button"
               className="bedroom-mobile-sheet__close"
@@ -317,7 +391,7 @@ export function BedroomWall({
             </button>
           </div>
           <div className="bedroom-mobile-sheet__scroll">
-            {projectsByYearDesc.map((project) => (
+            {indexProjects.map((project) => (
               <button
                 key={`sheet-${project.slug}`}
                 type="button"
@@ -355,32 +429,41 @@ export function BedroomWall({
         <WallLayoutDebugOverlay data={wallLayoutDebug} />
       ) : null}
 
-      {projects.map((project, i) => (
-        <PosterWallCell
-          key={project.slug}
-          project={project}
-          wallLayout={wallLayouts[i]!}
-          open={openSlug === project.slug}
-          wallDimmed={openSlug !== null && openSlug !== project.slug}
-          railHoverActive={railHoverBoost && hoverSlug === project.slug}
-          pointerFine={!coarsePointer}
-          onTogglePoster={onTogglePoster}
-        />
-      ))}
+      {projects.map((project, i) => {
+        const filterHidden = !projectMatchesWallFilter(project, wallFilter);
+        return (
+          <PosterWallCell
+            key={project.slug}
+            project={project}
+            wallLayout={wallLayouts[i]!}
+            open={openSlug === project.slug}
+            wallDimmed={openSlug !== null && openSlug !== project.slug}
+            railHoverActive={railHoverBoost && hoverSlug === project.slug}
+            pointerFine={!coarsePointer}
+            filterHidden={filterHidden}
+            onTogglePoster={onTogglePoster}
+          />
+        );
+      })}
 
-      {cursorEnabled ? (
-        <div
-          className={`bedroom-analog-cursor ${cursorVisible ? "is-visible" : ""} ${cursorActive ? "is-active" : ""} ${cursorOverImage ? "is-over-image" : ""}`}
-          style={{ transform: `translate3d(${cursorPos.x}px, ${cursorPos.y}px, 0)` }}
-          aria-hidden
-        >
-          <span className="bedroom-analog-cursor__ring bedroom-analog-cursor__ring--outer" />
-          <span className="bedroom-analog-cursor__ring bedroom-analog-cursor__ring--inner" />
-          <span className="bedroom-analog-cursor__cross bedroom-analog-cursor__cross--v" />
-          <span className="bedroom-analog-cursor__cross bedroom-analog-cursor__cross--h" />
-          <span className="bedroom-analog-cursor__dot" />
-        </div>
-      ) : null}
+      {cursorEnabled && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className={`bedroom-analog-cursor ${cursorVisible ? "is-visible" : ""} ${cursorActive ? "is-active" : ""} ${cursorOverImage ? "is-over-image" : ""}`}
+              style={{
+                transform: `translate3d(${cursorPos.x}px, ${cursorPos.y}px, 0)`,
+              }}
+              aria-hidden
+            >
+              <span className="bedroom-analog-cursor__ring bedroom-analog-cursor__ring--outer" />
+              <span className="bedroom-analog-cursor__ring bedroom-analog-cursor__ring--inner" />
+              <span className="bedroom-analog-cursor__cross bedroom-analog-cursor__cross--v" />
+              <span className="bedroom-analog-cursor__cross bedroom-analog-cursor__cross--h" />
+              <span className="bedroom-analog-cursor__dot" />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
