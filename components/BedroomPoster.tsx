@@ -859,6 +859,22 @@ function BedroomPosterInner({
       );
     }
 
+    if (embed.kind === "youtube-playlist") {
+      return (
+        <div className="bedroom-open-media-play aspect-video w-full overflow-hidden">
+          <iframe
+            title=""
+            src={`${embed.src}&autoplay=1&mute=0&playsinline=1`}
+            allow="autoplay; fullscreen; picture-in-picture"
+            loading="lazy"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          {clickVeil}
+        </div>
+      );
+    }
+
     if (embed.kind === "vimeo" && vimeoId) {
       return (
         <div className="bedroom-open-media-play aspect-video w-full overflow-hidden">

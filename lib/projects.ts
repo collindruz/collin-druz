@@ -27,9 +27,13 @@ export type Project = {
   client: string;
   /** Director credit — shown in the index rail and under the open player title. */
   director: string;
+  /** External project / reel page when no direct embed URL is available. */
+  projectUrl?: string;
   videoUrl: string;
   /** Present for YouTube sources (matches ID in videoUrl). */
   youtubeId?: string;
+  /** Present for YouTube playlist sources (matches list= in videoUrl). */
+  youtubePlaylistId?: string;
   vimeoId?: string;
   thumbnail: string | StaticImageData;
   thumbnailAlt: string;
@@ -637,9 +641,11 @@ export const projects: Project[] = [
     role: "Producer",
     client: "Spotify",
     director: "Mike Carson",
-    videoUrl: "https://www.youtube.com/watch?v=7ldm7FfUMM0",
-    youtubeId: "7ldm7FfUMM0",
-    thumbnail: "https://img.youtube.com/vi/7ldm7FfUMM0/hqdefault.jpg",
+    projectUrl: "https://www.mikecarson.tv/projects/spotify-frequency",
+    videoUrl: "https://vimeo.com/560721027",
+    vimeoId: "560721027",
+    thumbnail:
+      "https://i.vimeocdn.com/video/1159091014-eca0deb301f27e25dfa54a3a7b0024269251f71f3a97eab5358428fda126d5aa-d_640",
     thumbnailAlt: "Spotify Frequency Higher Learning still",
     description: "Frequency launch spot — HPLA.",
     featured: false,
@@ -793,16 +799,17 @@ export const projects: Project[] = [
   {
     slug: "spotify-live-room-series-2026",
     tapeCode: "CDR-2646",
-    archivalStamp: "NEEDS_VIDEO",
     title: "Spotify — Live Room Series",
     category: "Commercials",
     year: "2026",
     role: "Producer",
     client: "Spotify",
     director: "Various Directors",
-    videoUrl: "",
-    thumbnail: NEEDS_VIDEO_THUMB,
-    thumbnailAlt: "Spotify Live Room Series — video pending",
+    videoUrl:
+      "https://www.youtube.com/playlist?list=PLS4Ugv1bs-u9AWRS0fSIPhoKMY_Ar4glx",
+    youtubePlaylistId: "PLS4Ugv1bs-u9AWRS0fSIPhoKMY_Ar4glx",
+    thumbnail: "https://i.ytimg.com/vi/OQzORXqAoW8/hqdefault.jpg",
+    thumbnailAlt: "Spotify Live Room Series still",
     description: "Freenjoy.",
     featured: false,
     priority: "standard",
@@ -818,8 +825,10 @@ export const projects: Project[] = [
     role: "Producer",
     client: "Nike",
     director: "Mike Carson",
+    projectUrl: "https://www.mikecarson.tv/projects/nike-hoops-hotline-la",
     videoUrl: "",
-    thumbnail: NEEDS_VIDEO_THUMB,
+    thumbnail:
+      "https://cdn.prod.website-files.com/601b1c4cc3b8ba5ecab0de68/63f6cd8ef21cb962c245df3a_thumb.jpeg",
     thumbnailAlt: "Nike Hoops Hotline LA — video pending",
     description: "HPLA.",
     featured: false,
@@ -829,16 +838,17 @@ export const projects: Project[] = [
   {
     slug: "urban-decay-campaign-1",
     tapeCode: "CDR-2648",
-    archivalStamp: "NEEDS_VIDEO",
     title: "Urban Decay — Campaign 1",
     category: "Commercials",
     year: "2024",
     role: "Producer",
     client: "Urban Decay",
     director: "Hannah Lux Davis",
-    videoUrl: "",
-    thumbnail: NEEDS_VIDEO_THUMB,
-    thumbnailAlt: "Urban Decay Campaign 1 — video pending",
+    videoUrl: "https://vimeo.com/950802808",
+    vimeoId: "950802808",
+    thumbnail:
+      "https://i.vimeocdn.com/video/1859585620-1e0a76f99278a474b276e286879ddd879ac37cbce2896b4412088d02218c1a4f-d_640",
+    thumbnailAlt: "Urban Decay Campaign 1 still",
     description: "London Alley.",
     featured: false,
     priority: "standard",
@@ -847,16 +857,17 @@ export const projects: Project[] = [
   {
     slug: "urban-decay-campaign-2",
     tapeCode: "CDR-2649",
-    archivalStamp: "NEEDS_VIDEO",
     title: "Urban Decay — Campaign 2",
     category: "Commercials",
     year: "2024",
     role: "Producer",
     client: "Urban Decay",
     director: "Hannah Lux Davis",
-    videoUrl: "",
-    thumbnail: NEEDS_VIDEO_THUMB,
-    thumbnailAlt: "Urban Decay Campaign 2 — video pending",
+    videoUrl: "https://vimeo.com/950801713",
+    vimeoId: "950801713",
+    thumbnail:
+      "https://i.vimeocdn.com/video/1859584075-8d20952bd2330d3f2ce4c82297641bb83511be56a6f7e1ddb0e98e00867e395e-d_640",
+    thumbnailAlt: "Urban Decay Campaign 2 still",
     description: "London Alley.",
     featured: false,
     priority: "standard",
@@ -883,16 +894,18 @@ export const projects: Project[] = [
   {
     slug: "spotify-frequency-amorphous",
     tapeCode: "CDR-2651",
-    archivalStamp: "NEEDS_VIDEO",
     title: "Spotify — This Is Our Frequency: Amorphous",
     category: "Commercials",
     year: "2021",
     role: "Producer",
     client: "Spotify",
     director: "Mike Carson",
-    videoUrl: "",
-    thumbnail: NEEDS_VIDEO_THUMB,
-    thumbnailAlt: "Spotify Frequency Amorphous — video pending",
+    projectUrl: "https://www.mikecarson.tv/projects/spotify-frequency",
+    videoUrl: "https://vimeo.com/560719174",
+    vimeoId: "560719174",
+    thumbnail:
+      "https://i.vimeocdn.com/video/1159091292-87b2027f5dc1611d28fd8452d82e1960440db604bc0660529882b51ee2d8d947-d_640",
+    thumbnailAlt: "Spotify Frequency Amorphous still",
     description: "HPLA.",
     featured: false,
     priority: "standard",
@@ -901,16 +914,18 @@ export const projects: Project[] = [
   {
     slug: "spotify-frequency-yung-baby-tate",
     tapeCode: "CDR-2652",
-    archivalStamp: "NEEDS_VIDEO",
     title: "Spotify — This Is Our Frequency: Yung Baby Tate",
     category: "Commercials",
     year: "2021",
     role: "Producer",
     client: "Spotify",
     director: "Mike Carson",
-    videoUrl: "",
-    thumbnail: NEEDS_VIDEO_THUMB,
-    thumbnailAlt: "Spotify Frequency Yung Baby Tate — video pending",
+    projectUrl: "https://www.mikecarson.tv/projects/spotify-frequency",
+    videoUrl: "https://vimeo.com/560717335",
+    vimeoId: "560717335",
+    thumbnail:
+      "https://i.vimeocdn.com/video/1159077755-e92a5afe2bfa1049025194581b287dc9f7c77fd96b0d2654da6c25d05e1bdff2-d_640",
+    thumbnailAlt: "Spotify Frequency Yung Baby Tate still",
     description: "HPLA.",
     featured: false,
     priority: "standard",
@@ -1087,6 +1102,11 @@ export function getYoutubeVideoId(videoUrl: string): string | null {
   return m ? m[1] : null;
 }
 
+export function getYoutubePlaylistId(videoUrl: string): string | null {
+  const m = videoUrl.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
 export function getVimeoVideoId(videoUrl: string): string | null {
   const m = videoUrl.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   return m ? m[1] : null;
@@ -1103,6 +1123,7 @@ export function getProjectsForArchive(): Project[] {
 
 export type VideoEmbed =
   | { kind: "youtube"; src: string }
+  | { kind: "youtube-playlist"; src: string; listId: string }
   | { kind: "vimeo"; src: string }
   | { kind: "file"; src: string }
   | { kind: "unknown"; src: null };
@@ -1111,6 +1132,17 @@ export type VideoEmbed =
  * SWAP: extend if you host elsewhere (Wistia, etc.).
  */
 export function getVideoEmbed(videoUrl: string): VideoEmbed {
+  const playlist = videoUrl.match(
+    /youtube\.com\/playlist\?[^#]*list=([a-zA-Z0-9_-]+)/,
+  );
+  if (playlist) {
+    const listId = playlist[1]!;
+    return {
+      kind: "youtube-playlist",
+      src: `https://www.youtube.com/embed/videoseries?list=${listId}&rel=0&modestbranding=1`,
+      listId,
+    };
+  }
   const yt = videoUrl.match(
     /(?:youtube\.com\/watch\?[^#]*?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
   );
