@@ -14,6 +14,7 @@ import type { StaticImageData } from "next/image";
 import type { YTInstance } from "@/lib/ytTypes";
 import type { PosterWallLayout } from "@/lib/bedroomWallLayout";
 import {
+  formatDirectorCredit,
   getVideoEmbed,
   getVimeoVideoId,
   getYoutubeVideoId,
@@ -980,7 +981,7 @@ function BedroomPosterInner({
         aria-expanded={open}
         aria-label={
           project.director
-            ? `${project.title}. Dir. ${project.director}. Drag to reposition. Activate to ${open ? "close" : "open"}.`
+            ? `${project.title}. ${formatDirectorCredit(project.director)}. Drag to reposition. Activate to ${open ? "close" : "open"}.`
             : `${project.title}. Drag to reposition. Activate to ${open ? "close" : "open"}.`
         }
       >
@@ -1031,7 +1032,7 @@ function BedroomPosterInner({
                   </p>
                   {project.director ? (
                     <p className="bedroom-poster-title-strip__director line-clamp-2">
-                      Dir. {project.director}
+                      {formatDirectorCredit(project.director)}
                     </p>
                   ) : null}
                 </div>

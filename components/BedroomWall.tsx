@@ -18,6 +18,7 @@ import {
 } from "@/lib/bedroomWallLayout";
 import { CONTACT_EMAIL } from "@/lib/contact";
 import {
+  formatDirectorCredit,
   projectMatchesWallFilter,
   type Project,
   type ProjectWallFilter,
@@ -344,7 +345,7 @@ export function BedroomWall({
               onBlur={() => setHoverSlug((cur) => (cur === project.slug ? null : cur))}
               title={
                 project.director
-                  ? `${project.title} · Dir. ${project.director}`
+                  ? `${project.title} · ${formatDirectorCredit(project.director)}`
                   : project.title
               }
             >
@@ -353,7 +354,7 @@ export function BedroomWall({
                 <span className="bedroom-project-rail__title">{project.title}</span>
                 {project.director ? (
                   <span className="bedroom-project-rail__director">
-                    Dir. {project.director}
+                    {formatDirectorCredit(project.director)}
                   </span>
                 ) : null}
               </span>
@@ -409,7 +410,7 @@ export function BedroomWall({
                   <span className="bedroom-mobile-sheet__title">{project.title}</span>
                   {project.director ? (
                     <span className="bedroom-mobile-sheet__director">
-                      Dir. {project.director}
+                      {formatDirectorCredit(project.director)}
                     </span>
                   ) : null}
                 </span>

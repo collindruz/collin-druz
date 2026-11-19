@@ -841,12 +841,12 @@ export const projects: Project[] = [
     year: "2026",
     role: "Producer",
     client: "Spotify",
-    director: "Various Directors",
+    director: "various directors",
     videoUrl:
       "https://www.youtube.com/playlist?list=PLS4Ugv1bs-u9AWRS0fSIPhoKMY_Ar4glx",
     youtubePlaylistId: "PLS4Ugv1bs-u9AWRS0fSIPhoKMY_Ar4glx",
-    thumbnail: "https://i.ytimg.com/vi/OQzORXqAoW8/hqdefault.jpg",
-    thumbnailAlt: "Spotify Live Room Series still",
+    thumbnail: "https://i.ytimg.com/vi/DiI2cNzUoiU/hqdefault.jpg",
+    thumbnailAlt: "Spotify Live Room — Kelela episode still",
     description: "Freenjoy.",
     featured: false,
     priority: "standard",
@@ -1151,6 +1151,11 @@ export function getVimeoVideoId(videoUrl: string): string | null {
 
 export function getProjectBySlug(slug: string): Project | undefined {
   return projects.find((p) => p.slug === slug);
+}
+
+/** Omit "Dir." when the credit is already a group label (e.g. various directors). */
+export function formatDirectorCredit(director: string): string {
+  return /^various\b/i.test(director.trim()) ? director : `Dir. ${director}`;
 }
 
 /** Same order as `projects` in this file (stable list reference — do not mutate). */
