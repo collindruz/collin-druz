@@ -4,15 +4,17 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
 import { BedroomPoster } from "@/components/BedroomPoster";
 import { WallLayoutDebugOverlay } from "@/components/WallLayoutDebugOverlay";
-import type {
-  PosterWallLayout,
-  WallDebugOverlay,
+import {
+  computeFilteredWallLayouts,
+  type PosterWallLayout,
+  type WallDebugOverlay,
 } from "@/lib/bedroomWallLayout";
 import { CONTACT_EMAIL } from "@/lib/contact";
 import {
@@ -20,22 +22,6 @@ import {
   type Project,
   type ProjectWallFilter,
 } from "@/lib/projects";
-
-function indexFilterClass(
-  project: Project,
-  wallFilter: ProjectWallFilter,
-  activeSlug: string | null,
-): string {
-  const parts: string[] = [];
-  if (activeSlug === project.slug) parts.push("is-active");
-  if (wallFilter === "all") return parts.join(" ");
-  parts.push(
-    projectMatchesWallFilter(project, wallFilter)
-      ? "is-filter-match"
-      : "is-filter-receded",
-  );
-  return parts.join(" ");
-}
 
 type Props = {
   projects: Project[];
@@ -52,7 +38,7 @@ const PosterWallCell = memo(function PosterWallCell({
   wallDimmed,
   railHoverActive,
   pointerFine,
-  filterReceded,
+  filterHidden,
   onTogglePoster,
 }: {
   project: Project;
@@ -61,7 +47,7 @@ const PosterWallCell = memo(function PosterWallCell({
   wallDimmed: boolean;
   railHoverActive: boolean;
   pointerFine: boolean;
-  filterReceded: boolean;
+  filterHidden: boolean;
   onTogglePoster: (slug: string) => void;
 }) {
   const onToggle = useCallback(() => {
@@ -76,7 +62,7 @@ const PosterWallCell = memo(function PosterWallCell({
       wallDimmed={wallDimmed}
       railHoverActive={railHoverActive}
       pointerFine={pointerFine}
-      filterReceded={filterReceded}
+      filterHidden={filterHidden}
       onToggle={onToggle}
     />
   );
@@ -86,7 +72,7 @@ PosterWallCell.displayName = "PosterWallCell";
 const WALL_FILTER_OPTIONS: { id: ProjectWallFilter; label: string }[] = [
   { id: "all", label: "ALL" },
   { id: "music-video", label: "MUSIC VIDEO" },
-  { id: "commercial-branded", label: "COMMERCIAL / BRANDED" },
+  { id: "commercial-branded", label: "COMMERCIAL" },
 ];
 
 function ProjectIndexFilters({
@@ -139,42 +125,43 @@ export function BedroomWall({
     mobileSheetOpenRef.current = mobileSheetOpen;
   }, [mobileSheetOpen]);
 
-  const onTogglePoster = useCallback(
-    (slug: string) => {
-      setOpenSlug((cur) => {
-        if (cur === slug) return null;
-        if (wallFilter !== "all") {
-          const project = projects.find((entry) => entry.slug === slug);
-          if (project && !projectMatchesWallFilter(project, wallFilter)) {
-            setWallFilter("all");
-          }
-        }
-        return slug;
-      });
-    },
-    [wallFilter, projects],
-  );
-
-  const pickFromSheet = useCallback(
-    (slug: string) => {
-      setOpenSlug((cur) => {
-        if (cur === slug) return null;
-        if (wallFilter !== "all") {
-          const project = projects.find((entry) => entry.slug === slug);
-          if (project && !projectMatchesWallFilter(project, wallFilter)) {
-            setWallFilter("all");
-          }
-        }
-        return slug;
-      });
-      setMobileSheetOpen(false);
-    },
-    [wallFilter, projects],
-  );
-
-  const onSelectWallFilter = useCallback((next: ProjectWallFilter) => {
-    setWallFilter(next);
+  const onTogglePoster = useCallback((slug: string) => {
+    setOpenSlug((cur) => (cur === slug ? null : slug));
   }, []);
+
+  const pickFromSheet = useCallback((slug: string) => {
+    setOpenSlug((cur) => (cur === slug ? null : slug));
+    setMobileSheetOpen(false);
+  }, []);
+
+  const onSelectWallFilter = useCallback(
+    (next: ProjectWallFilter) => {
+      if (next !== "all" && openSlug) {
+        const openProject = projects.find((project) => project.slug === openSlug);
+        if (openProject && !projectMatchesWallFilter(openProject, next)) {
+          setOpenSlug(null);
+        }
+      }
+      setWallFilter(next);
+    },
+    [openSlug, projects],
+  );
+
+  const indexProjects = useMemo(
+    () =>
+      projectsByYearDesc.filter((project) =>
+        projectMatchesWallFilter(project, wallFilter),
+      ),
+    [projectsByYearDesc, wallFilter],
+  );
+
+  const filteredLayouts = useMemo(
+    () =>
+      wallFilter === "all"
+        ? wallLayouts
+        : computeFilteredWallLayouts(projects, wallFilter),
+    [projects, wallFilter, wallLayouts],
+  );
 
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
@@ -347,12 +334,12 @@ export function BedroomWall({
           className="bedroom-project-rail__filters"
         />
         <div ref={stripRef} className="bedroom-project-rail__scroll">
-          {projectsByYearDesc.map((project) => (
+          {indexProjects.map((project) => (
             <button
               key={project.slug}
               type="button"
               data-video-slug={project.slug}
-              className={`bedroom-project-rail__item ${indexFilterClass(project, wallFilter, openSlug)}`}
+              className={`bedroom-project-rail__item ${openSlug === project.slug ? "is-active" : ""}`}
               onClick={() => onTogglePoster(project.slug)}
               onMouseEnter={() => setHoverSlug(project.slug)}
               onMouseLeave={() => setHoverSlug((cur) => (cur === project.slug ? null : cur))}
@@ -412,12 +399,12 @@ export function BedroomWall({
             </button>
           </div>
           <div className="bedroom-mobile-sheet__scroll">
-            {projectsByYearDesc.map((project) => (
+            {indexProjects.map((project) => (
               <button
                 key={`sheet-${project.slug}`}
                 type="button"
                 data-video-slug={project.slug}
-                className={`bedroom-mobile-sheet__item ${indexFilterClass(project, wallFilter, openSlug)}`}
+                className={`bedroom-mobile-sheet__item ${openSlug === project.slug ? "is-active" : ""}`}
                 onClick={() => pickFromSheet(project.slug)}
               >
                 <span className="bedroom-mobile-sheet__year">{project.year}</span>
@@ -451,19 +438,19 @@ export function BedroomWall({
       ) : null}
 
       {projects.map((project, i) => {
-        const filterReceded =
+        const filterHidden =
           wallFilter !== "all" &&
           !projectMatchesWallFilter(project, wallFilter);
         return (
           <PosterWallCell
             key={project.slug}
             project={project}
-            wallLayout={wallLayouts[i]!}
+            wallLayout={filteredLayouts[i]!}
             open={openSlug === project.slug}
             wallDimmed={openSlug !== null && openSlug !== project.slug}
             railHoverActive={railHoverBoost && hoverSlug === project.slug}
             pointerFine={!coarsePointer}
-            filterReceded={filterReceded}
+            filterHidden={filterHidden}
             onTogglePoster={onTogglePoster}
           />
         );

@@ -1,7 +1,9 @@
 import {
+  projectMatchesWallFilter,
   type Project,
   type ProjectPriority,
   type ProjectSize,
+  type ProjectWallFilter,
 } from "@/lib/projects";
 
 /** Per-poster placement for the wall (pure). */
@@ -479,12 +481,11 @@ const WALL_OVERFLOW_SLOT_RANKS = [
   39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
 ] as const;
 
-function assignWallLayoutFromSlot(
+function assignLayoutFromManualSlot(
   m: WallMeta,
-  slotRank: number,
+  slot: ManualBoardSlot,
   seq: number,
 ): PosterWallLayout {
-  const slot = slotForRank(slotRank);
   const ex = gridExtents(slot.size, m.role);
   let left = slot.leftPct;
   let top = slot.topPct;
@@ -498,6 +499,42 @@ function assignWallLayoutFromSlot(
     rotateDeg: Math.round(slot.rotateDeg * 100) / 100,
     offsetXPx: Math.round(handOffsetPx(m.p.slug, seq, 0) * 0.55),
     offsetYPx: Math.round(handOffsetPx(m.p.slug, seq, 1) * 0.55),
+  };
+}
+
+function assignWallLayoutFromSlot(
+  m: WallMeta,
+  slotRank: number,
+  seq: number,
+): PosterWallLayout {
+  return assignLayoutFromManualSlot(m, slotForRank(slotRank), seq);
+}
+
+/** Open landscape pack for a filtered subset — larger, more spaced than the full board. */
+function packedFilterSlot(rank: number, count: number): ManualBoardSlot {
+  const cols = count <= 9 ? 3 : count <= 16 ? 4 : count <= 25 ? 5 : 6;
+  const rows = Math.max(1, Math.ceil(count / cols));
+  const col = rank % cols;
+  const row = Math.floor(rank / cols);
+  const leftMin = 10.8;
+  const leftMax = 71.2;
+  const topMin = 22.4;
+  const topMax = count <= 12 ? 54 : count <= 22 ? 64 : 71;
+  const xSpan = leftMax - leftMin;
+  const ySpan = topMax - topMin;
+  const left =
+    cols === 1 ? (leftMin + leftMax) / 2 : leftMin + (col / (cols - 1)) * xSpan;
+  const top =
+    rows === 1 ? (topMin + topMax) / 2 : topMin + (row / (rows - 1)) * ySpan;
+  const stagger = row % 2 === 1 ? xSpan / cols / 5 : 0;
+  const size: ProjectSize =
+    rank < 3 ? "xl" : rank < 8 ? "lg" : rank < Math.max(12, Math.ceil(count * 0.55)) ? "md" : "sm";
+  return {
+    leftPct: Math.round((left + stagger) * 10) / 10,
+    topPct: Math.round(top * 10) / 10,
+    size,
+    rotateDeg: Math.round((((rank % 5) - 2) * 0.14) * 100) / 100,
+    zIndex: Math.max(18, 78 - rank),
   };
 }
 
@@ -562,5 +599,34 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
   }
 
   applyWallLayoutSlugSwaps(projects, out);
+  return out;
+}
+
+/**
+ * ALL keeps the approved board. MUSIC VIDEO / COMMERCIAL pack matching posters
+ * into a more open viewing grid so size and position clearly reorient.
+ * Hidden posters keep their ALL positions so they fade out in place.
+ */
+export function computeFilteredWallLayouts(
+  projects: Project[],
+  filter: ProjectWallFilter,
+): PosterWallLayout[] {
+  const base = computeWallLayouts(projects);
+  if (filter === "all" || projects.length === 0) return base;
+
+  const metas = buildMetasForWall(projects);
+  const matching = metas
+    .filter((m) => projectMatchesWallFilter(m.p, filter))
+    .sort((a, b) => b.score - a.score || a.idx - b.idx);
+  const count = matching.length;
+
+  const out = base.slice();
+  matching.forEach((m, rank) => {
+    out[m.idx] = assignLayoutFromManualSlot(
+      m,
+      packedFilterSlot(rank, count),
+      rank + 97,
+    );
+  });
   return out;
 }

@@ -12,7 +12,7 @@ export type ProjectPriority = "hero" | "large" | "standard" | "small";
 
 export type ProjectSize = "xl" | "lg" | "md" | "sm";
 
-/** Wall/index filter lens — ALL · MUSIC VIDEO · COMMERCIAL / BRANDED. */
+/** Wall/index filter lens — ALL · MUSIC VIDEO · COMMERCIAL. */
 export type ProjectFilterCategory = "music-video" | "commercial-branded";
 
 export type Project = {
