@@ -522,8 +522,7 @@ function packedFilterSlot(rank: number, count: number): ManualBoardSlot {
   const topMax = count <= 12 ? 54 : count <= 22 ? 64 : 71;
   const xSpan = leftMax - leftMin;
   const ySpan = topMax - topMin;
-  const left =
-    cols === 1 ? (leftMin + leftMax) / 2 : leftMin + (col / (cols - 1)) * xSpan;
+  const left = leftMin + (col / (cols - 1)) * xSpan;
   const top =
     rows === 1 ? (topMin + topMax) / 2 : topMin + (row / (rows - 1)) * ySpan;
   const stagger = row % 2 === 1 ? xSpan / cols / 5 : 0;
