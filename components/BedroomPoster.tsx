@@ -79,8 +79,6 @@ type Props = {
   railHoverActive: boolean;
   /** Fine pointer (e.g. desktop): poster hover raises z so the slab reads above neighbors. */
   pointerFine: boolean;
-  /** Category filter — poster fades out in place; layout unchanged. */
-  filterHidden?: boolean;
   onToggle: () => void;
 };
 
@@ -131,7 +129,6 @@ function BedroomPosterInner({
   wallDimmed,
   railHoverActive,
   pointerFine,
-  filterHidden = false,
   onToggle,
 }: Props) {
   const outerIoRef = useRef<HTMLDivElement>(null);
@@ -201,7 +198,6 @@ function BedroomPosterInner({
   const openScale = narrowViewport ? 1.04 : 1.26;
   const openLiftPx = open ? (narrowViewport ? -7 : -12) : 0;
   const passiveRecessed = wallDimmed && !open && !isDragging;
-  const filterScale = filterHidden ? 0.985 : 1;
 
   /** Off-screen posters skip thumbnail decode until near viewport, rail, pointer hover, or open. */
   useLayoutEffect(() => {
@@ -940,7 +936,6 @@ function BedroomPosterInner({
     <div
       ref={outerIoRef}
       className="pointer-events-none absolute"
-      aria-hidden={filterHidden}
       style={{
         top: `${wallLayout.topPct}%`,
         left: `${wallLayout.leftPct}%`,
@@ -952,26 +947,24 @@ function BedroomPosterInner({
             : hoverStack
               ? 90
               : wallLayout.zIndex,
-        opacity: filterHidden ? 0 : 1,
-        transform: `translate(calc(-50% + ${wallLayout.offsetXPx}px), calc(-50% + ${wallLayout.offsetYPx}px + ${openLiftPx}px)) rotate(${wallLayout.rotateDeg}deg) scale(${open ? openScale : filterScale})`,
+        transform: `translate(calc(-50% + ${wallLayout.offsetXPx}px), calc(-50% + ${wallLayout.offsetYPx}px + ${openLiftPx}px)) rotate(${wallLayout.rotateDeg}deg) scale(${open ? openScale : 1})`,
         filter: passiveRecessed
           ? "brightness(0.35) saturate(0.52) contrast(0.92)"
           : undefined,
         transition: isDragging
           ? "none"
-          : "opacity 220ms ease, filter 380ms cubic-bezier(0.22, 1, 0.36, 1), transform 760ms cubic-bezier(0.22, 1, 0.36, 1), top 760ms cubic-bezier(0.22, 1, 0.36, 1), left 760ms cubic-bezier(0.22, 1, 0.36, 1), width 760ms cubic-bezier(0.22, 1, 0.36, 1)",
-        transitionDelay: isDragging || filterHidden ? "0ms" : "40ms",
+          : "filter 380ms cubic-bezier(0.22, 1, 0.36, 1), transform 760ms cubic-bezier(0.22, 1, 0.36, 1), top 760ms cubic-bezier(0.22, 1, 0.36, 1), left 760ms cubic-bezier(0.22, 1, 0.36, 1), width 760ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     >
       <div
         ref={shellRef}
-        className={`pointer-events-auto relative z-[1] w-full max-w-none overflow-visible bg-transparent ${isDragging ? "bedroom-poster-shell--dragging cursor-grabbing select-none" : "cursor-grab"} ${filterHidden ? "pointer-events-none" : ""} focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-charcoal/25`}
+        className={`pointer-events-auto relative z-[1] w-full max-w-none overflow-visible bg-transparent ${isDragging ? "bedroom-poster-shell--dragging cursor-grabbing select-none" : "cursor-grab"} focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-charcoal/25`}
         data-wall-poster
         style={{
           transform: `translate(${outerTx}px, ${outerTy}px)`,
           touchAction: isDragging ? ("none" as const) : ("manipulation" as const),
         }}
-        tabIndex={filterHidden ? -1 : 0}
+        tabIndex={0}
         onPointerDownCapture={onPointerDownCapture}
         onDragStartCapture={(e) => e.preventDefault()}
         onKeyDown={(e) => {

@@ -38,7 +38,6 @@ const PosterWallCell = memo(function PosterWallCell({
   wallDimmed,
   railHoverActive,
   pointerFine,
-  filterHidden,
   onTogglePoster,
 }: {
   project: Project;
@@ -47,7 +46,6 @@ const PosterWallCell = memo(function PosterWallCell({
   wallDimmed: boolean;
   railHoverActive: boolean;
   pointerFine: boolean;
-  filterHidden: boolean;
   onTogglePoster: (slug: string) => void;
 }) {
   const onToggle = useCallback(() => {
@@ -62,7 +60,6 @@ const PosterWallCell = memo(function PosterWallCell({
       wallDimmed={wallDimmed}
       railHoverActive={railHoverActive}
       pointerFine={pointerFine}
-      filterHidden={filterHidden}
       onToggle={onToggle}
     />
   );
@@ -438,9 +435,7 @@ export function BedroomWall({
       ) : null}
 
       {projects.map((project, i) => {
-        const filterHidden =
-          wallFilter !== "all" &&
-          !projectMatchesWallFilter(project, wallFilter);
+        if (!projectMatchesWallFilter(project, wallFilter)) return null;
         return (
           <PosterWallCell
             key={project.slug}
@@ -450,7 +445,6 @@ export function BedroomWall({
             wallDimmed={openSlug !== null && openSlug !== project.slug}
             railHoverActive={railHoverBoost && hoverSlug === project.slug}
             pointerFine={!coarsePointer}
-            filterHidden={filterHidden}
             onTogglePoster={onTogglePoster}
           />
         );
