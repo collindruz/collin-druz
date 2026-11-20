@@ -286,6 +286,33 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
+.bedroom-timecode-rail--playlist {
+  grid-template-columns: auto 2.4rem 1fr 2.4rem auto;
+}
+
+.bedroom-timecode-rail__skip {
+  appearance: none;
+  margin: 0;
+  padding: 0 1px;
+  border: 0;
+  background: transparent;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  color: rgba(223, 226, 230, 0.78);
+  cursor: pointer;
+}
+
+.bedroom-watch-original {
+  grid-column: 1 / -1;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  color: rgba(223, 226, 230, 0.82);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .bedroom-timecode-rail__clock {
   font-size: 8px;
   letter-spacing: 0.08em;

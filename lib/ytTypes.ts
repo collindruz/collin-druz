@@ -10,6 +10,11 @@ export type YTInstance = {
   seekTo?(seconds: number, allowSeekAhead?: boolean): void;
   isMuted?: () => boolean;
   getPlayerState?: () => number;
+  nextVideo?(): void;
+  previousVideo?(): void;
+  getPlaylistIndex?(): number;
+  getPlaylist?(): string[];
+  setVolume?(volume: number): void;
   /** Match IFrame API — keeps embed at shell pixels (avoids “100%” resolving wrong / zoomed pre-play UI). */
   setSize?(width: number, height: number): void;
 };
@@ -20,7 +25,7 @@ declare global {
       Player: new (
         el: HTMLElement | string,
         opts: {
-          videoId: string;
+          videoId?: string;
           width?: string | number;
           height?: string | number;
           playerVars?: Record<string, string | number>;
@@ -30,6 +35,7 @@ declare global {
               data: number;
               target: YTInstance;
             }) => void;
+            onError?: (event: { data: number; target: YTInstance }) => void;
           };
         },
       ) => YTInstance;

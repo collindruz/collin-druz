@@ -11,8 +11,16 @@ import {
   type CSSProperties,
 } from "react";
 import type { StaticImageData } from "next/image";
+import VimeoPlayer from "@vimeo/player";
 import type { YTInstance } from "@/lib/ytTypes";
 import type { PosterWallLayout } from "@/lib/bedroomWallLayout";
+import {
+  createFilePlayback,
+  createVimeoPlayback,
+  createYouTubePlayback,
+  watchOriginalHref,
+  type PlaybackControls,
+} from "@/lib/mediaPlayback";
 import {
   formatDirectorCredit,
   getVideoEmbed,
@@ -104,6 +112,10 @@ function tryUnmutePlay(pl: YTInstance) {
   }
 }
 
+function isPlaybackControlTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest("[data-playback-control]"));
+}
+
 type DragSession = {
   pointerId: number;
   startClientX: number;
@@ -138,6 +150,7 @@ function BedroomPosterInner({
   const mountRef = useRef<HTMLDivElement>(null);
   const ytShellRef = useRef<HTMLDivElement>(null);
   const ytPlayerRef = useRef<YTInstance | null>(null);
+  const playbackRef = useRef<PlaybackControls | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const sessionRef = useRef<DragSession | null>(null);
   const dragLiveRef = useRef({ x: 0, y: 0 });
@@ -145,6 +158,7 @@ function BedroomPosterInner({
 
   const [ytReady, setYtReady] = useState(false);
   const [ytSoundBlocked, setYtSoundBlocked] = useState(false);
+  const [playbackFailed, setPlaybackFailed] = useState(false);
   /** Deferred one frame after open so no iframe/video mounts during the opening commit. */
   const [embedArmed, setEmbedArmed] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -174,6 +188,11 @@ function BedroomPosterInner({
   );
   const ytId =
     project.youtubeId ?? getYoutubeVideoId(project.videoUrl);
+  const playlistId =
+    embed.kind === "youtube-playlist"
+      ? (project.youtubePlaylistId ?? embed.listId)
+      : null;
+  const originalHref = watchOriginalHref(project);
   const edgeClip = useMemo(() => tearClipPath(project.slug), [project.slug]);
 
   const edgeStyle: CSSProperties = {
@@ -259,15 +278,32 @@ function BedroomPosterInner({
 
   const detachWindowListeners = useRef(() => {});
 
-  const resumePlayback = useCallback(() => {
+  const togglePlayback = useCallback(() => {
+    const controls = playbackRef.current;
+    if (controls) {
+      controls.toggle();
+      return;
+    }
     const pl = ytPlayerRef.current;
     if (pl && ytReady) {
+      try {
+        if (pl.getPlayerState?.() === 1) {
+          pl.pauseVideo();
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
       tryUnmutePlay(pl);
     }
     const v = videoRef.current;
     if (v && embed.kind === "file") {
-      v.muted = false;
-      void v.play().catch(() => {});
+      if (v.paused) {
+        v.muted = false;
+        void v.play().catch(() => {});
+      } else {
+        v.pause();
+      }
     }
   }, [embed.kind, ytReady]);
 
@@ -284,7 +320,15 @@ function BedroomPosterInner({
     };
   }, [open]);
 
-  const loadYt = Boolean(open && embedArmed && ytId);
+  const loadYouTube = Boolean(
+    open &&
+      embedArmed &&
+      ((embed.kind === "youtube" && ytId) ||
+        (embed.kind === "youtube-playlist" && playlistId)),
+  );
+  const loadVimeo = Boolean(
+    open && embedArmed && embed.kind === "vimeo" && vimeoId,
+  );
 
   useEffect(() => {
     if (!isDragging) {
@@ -383,7 +427,11 @@ function BedroomPosterInner({
   }, [open, resizeTick]);
 
   useEffect(() => {
-    if (!ytId || !loadYt) return;
+    if (!loadYouTube) return;
+    const kind =
+      embed.kind === "youtube-playlist" ? "youtube-playlist" : "youtube";
+    if (kind === "youtube" && !ytId) return;
+    if (kind === "youtube-playlist" && !playlistId) return;
     let alive = true;
     let player: YTInstance | null = null;
 
@@ -410,8 +458,9 @@ function BedroomPosterInner({
         ({ w, h } = shellPixelSize());
       }
 
+      const isPlaylist = kind === "youtube-playlist";
       player = new window.YT.Player(mountRef.current, {
-        videoId: ytId,
+        ...(isPlaylist ? {} : { videoId: ytId! }),
         width: w,
         height: h,
         playerVars: {
@@ -421,17 +470,20 @@ function BedroomPosterInner({
           modestbranding: 1,
           playsinline: 1,
           rel: 0,
-          loop: 1,
-          playlist: ytId,
           disablekb: 1,
           fs: 0,
           iv_load_policy: 3,
           cc_load_policy: 3,
+          ...(isPlaylist
+            ? { listType: "playlist", list: playlistId!, loop: 0 }
+            : { loop: 1, playlist: ytId! }),
         },
         events: {
           onReady: (e) => {
             if (!alive) return;
             ytPlayerRef.current = e.target;
+            playbackRef.current = createYouTubePlayback(e.target, kind);
+            setPlaybackFailed(false);
             setYtReady(true);
             const pl = e.target;
             try {
@@ -458,6 +510,12 @@ function BedroomPosterInner({
               }
             }
           },
+          onError: (e) => {
+            if (!alive) return;
+            if (e.data === 2 || e.data === 5 || e.data === 100 || e.data === 101 || e.data === 150) {
+              setPlaybackFailed(true);
+            }
+          },
         },
       });
     };
@@ -468,6 +526,7 @@ function BedroomPosterInner({
       alive = false;
       setYtReady(false);
       setYtSoundBlocked(false);
+      playbackRef.current = null;
       ytPlayerRef.current = null;
       try {
         player?.pauseVideo();
@@ -477,7 +536,7 @@ function BedroomPosterInner({
         /* ignore */
       }
     };
-  }, [ytId, loadYt]);
+  }, [embed.kind, loadYouTube, playlistId, ytId]);
 
   useEffect(() => {
     const pl = ytPlayerRef.current;
@@ -499,7 +558,7 @@ function BedroomPosterInner({
     const ro = new ResizeObserver(() => sync());
     ro.observe(shell);
     return () => ro.disconnect();
-  }, [open, ytReady, ytId]);
+  }, [open, ytReady, ytId, playlistId]);
 
   useEffect(() => {
     const pl = ytPlayerRef.current;
@@ -514,10 +573,104 @@ function BedroomPosterInner({
   }, [open, ytReady]);
 
   useEffect(() => {
+    if (!loadVimeo || !vimeoId) return;
+    let alive = true;
+    let player: VimeoPlayer | null = null;
+
+    const run = async () => {
+      for (let i = 0; i < 4 && (!mountRef.current || !ytShellRef.current); i++) {
+        await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      }
+      const mount = mountRef.current;
+      const shell = ytShellRef.current;
+      if (!alive || !mount) return;
+
+      const w = Math.max(200, Math.round(shell?.offsetWidth || 640));
+      const h = Math.max(200, Math.round(shell?.offsetHeight || 360));
+
+      player = new VimeoPlayer(mount, {
+        id: vimeoId,
+        width: w,
+        height: h,
+        autoplay: true,
+        muted: true,
+        controls: false,
+        loop: false,
+        background: false,
+        playsinline: true,
+        dnt: true,
+        title: false,
+        byline: false,
+        portrait: false,
+      });
+
+      player.on("error", () => {
+        if (alive) setPlaybackFailed(true);
+      });
+
+      try {
+        await player.ready();
+      } catch {
+        if (alive) setPlaybackFailed(true);
+        return;
+      }
+      if (!alive) {
+        try {
+          await player.destroy();
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+
+      playbackRef.current = createVimeoPlayback(player);
+      setPlaybackFailed(false);
+      setYtReady(true);
+
+      const unmute = () => {
+        void (async () => {
+          try {
+            await player?.setMuted(false);
+            await player?.setVolume(1);
+            await player?.play();
+          } catch {
+            try {
+              await player?.play();
+            } catch {
+              /* autoplay policy */
+            }
+          }
+        })();
+      };
+      unmute();
+      window.setTimeout(unmute, 80);
+      window.setTimeout(unmute, 240);
+    };
+
+    void run();
+
+    return () => {
+      alive = false;
+      setYtReady(false);
+      setYtSoundBlocked(false);
+      const controls = playbackRef.current;
+      playbackRef.current = null;
+      controls?.destroy();
+      if (controls == null && player) {
+        void player.destroy().catch(() => {});
+      }
+    };
+  }, [loadVimeo, vimeoId]);
+
+  useEffect(() => {
     const v = videoRef.current;
     if (!v || embed.kind !== "file" || !open || !embedArmed) return;
+    playbackRef.current = createFilePlayback(v);
     v.muted = true;
     void v.play().catch(() => {});
+    return () => {
+      playbackRef.current = null;
+    };
   }, [embed.kind, embedArmed, open]);
 
   useEffect(() => {
@@ -526,6 +679,7 @@ function BedroomPosterInner({
         setPlaybackTime(0);
         setPlaybackDuration(0);
         setIsScrubbing(false);
+        setPlaybackFailed(false);
       });
       return;
     }
@@ -549,49 +703,33 @@ function BedroomPosterInner({
       };
     }
 
-    if (embed.kind === "youtube" && ytReady) {
-      const pl = ytPlayerRef.current;
-      if (!pl) return;
-      const id = window.setInterval(() => {
-        try {
-          const current = pl.getCurrentTime?.() ?? 0;
-          const dur = pl.getDuration?.() ?? 0;
-          if (!isScrubbing) {
-            setPlaybackTime(current);
-            setPlaybackDuration(dur);
-          }
-          setYtSoundBlocked(
-            typeof pl.isMuted === "function" ? pl.isMuted() : false,
-          );
-        } catch {
-          setYtSoundBlocked(false);
-        }
-      }, 250);
-      return () => clearInterval(id);
-    }
+    if (!ytReady) return;
+    const id = window.setInterval(() => {
+      const controls = playbackRef.current;
+      if (!controls) return;
+      if (!isScrubbing) {
+        setPlaybackTime(controls.getCurrentTime());
+        setPlaybackDuration(controls.getDuration());
+      }
+      setYtSoundBlocked(controls.isMuted());
+    }, 250);
+    return () => clearInterval(id);
   }, [embed.kind, isScrubbing, open, ytReady]);
 
-  const handleScrub = useCallback(
-    (nextRaw: string) => {
-      const next = Number(nextRaw);
-      if (!Number.isFinite(next)) return;
-      setPlaybackTime(next);
-      if (embed.kind === "file") {
-        const v = videoRef.current;
-        if (v) v.currentTime = next;
-        return;
-      }
-      if (embed.kind === "youtube" && ytReady) {
-        const pl = ytPlayerRef.current;
-        try {
-          pl?.seekTo?.(next, true);
-        } catch {
-          /* ignore */
-        }
-      }
-    },
-    [embed.kind, ytReady],
-  );
+  const handleScrub = useCallback((nextRaw: string) => {
+    const next = Number(nextRaw);
+    if (!Number.isFinite(next)) return;
+    setPlaybackTime(next);
+    const controls = playbackRef.current;
+    if (controls) {
+      controls.seek(next);
+      return;
+    }
+    if (embed.kind === "file") {
+      const v = videoRef.current;
+      if (v) v.currentTime = next;
+    }
+  }, [embed.kind]);
 
   useEffect(() => {
     if (!isScrubbing) return;
@@ -735,18 +873,19 @@ function BedroomPosterInner({
 
       if (!wasDrag) {
         if (open) {
-          resumePlayback();
+          togglePlayback();
           return;
         }
         onToggle();
       }
     },
-    [endDragSession, onToggle, open, resumePlayback],
+    [endDragSession, onToggle, open, togglePlayback],
   );
 
   const onPointerDownCapture = useCallback(
     (e: React.PointerEvent) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (isPlaybackControlTarget(e.target)) return;
       if (sessionRef.current) return;
 
       const origin = dragOffset;
@@ -802,13 +941,6 @@ function BedroomPosterInner({
   const videoBlock = (() => {
     if (!open) return null;
 
-    const clickVeil = (
-      <div
-        className="pointer-events-none absolute inset-0 z-20 cursor-pointer bg-transparent"
-        aria-hidden
-      />
-    );
-
     const openThumbHold = (
       <div className="bedroom-yt-embed-root w-full overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element -- native lazy load; avoid N× /_next/image optimizer calls on the wall */}
@@ -843,51 +975,21 @@ function BedroomPosterInner({
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
           />
-          {clickVeil}
         </div>
       );
     }
 
-    if (embed.kind === "youtube" && ytId) {
+    if (
+      (embed.kind === "youtube" && ytId) ||
+      (embed.kind === "youtube-playlist" && playlistId) ||
+      (embed.kind === "vimeo" && vimeoId)
+    ) {
       return (
         <div
           ref={ytShellRef}
           className={`bedroom-yt-embed-root w-full ${ytSoundBlocked ? "brightness-[0.96] saturate-[0.85]" : ""}`}
         >
           <div ref={mountRef} className="bedroom-yt-embed-mount" />
-          {clickVeil}
-        </div>
-      );
-    }
-
-    if (embed.kind === "youtube-playlist") {
-      return (
-        <div className="bedroom-open-media-play aspect-video w-full overflow-hidden">
-          <iframe
-            title=""
-            src={`${embed.src}&autoplay=1&mute=0&playsinline=1`}
-            allow="autoplay; fullscreen; picture-in-picture"
-            loading="lazy"
-            draggable={false}
-            onDragStart={(e) => e.preventDefault()}
-          />
-          {clickVeil}
-        </div>
-      );
-    }
-
-    if (embed.kind === "vimeo" && vimeoId) {
-      return (
-        <div className="bedroom-open-media-play aspect-video w-full overflow-hidden">
-          <iframe
-            title=""
-            src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=0&loop=1&controls=0&playsinline=1`}
-            allow="autoplay; fullscreen; picture-in-picture"
-            loading="lazy"
-            draggable={false}
-            onDragStart={(e) => e.preventDefault()}
-          />
-          {clickVeil}
         </div>
       );
     }
@@ -1009,27 +1111,72 @@ function BedroomPosterInner({
               style={edgeStyle}
             >
               {videoBlock}
-              <div className="bedroom-timecode-rail" aria-label="Playback timeline">
-                <span className="bedroom-timecode-rail__clock">
-                  {formatClock(playbackTime)}
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={Math.max(0.1, playbackDuration || 0)}
-                  step={0.01}
-                  value={Math.min(playbackTime, Math.max(0.1, playbackDuration || 0))}
-                  onPointerDown={() => setIsScrubbing(true)}
-                  onPointerUp={() => setIsScrubbing(false)}
-                  onBlur={() => setIsScrubbing(false)}
-                  onChange={(e) => handleScrub(e.target.value)}
-                  className="bedroom-timecode-rail__range"
-                  aria-label="Seek timeline"
-                />
-                <span className="bedroom-timecode-rail__clock bedroom-timecode-rail__clock--end">
-                  {formatClock(playbackDuration)}
-                </span>
-              </div>
+              {playbackFailed || embed.kind === "unknown" ? (
+                <div className="bedroom-timecode-rail" data-playback-control>
+                  {originalHref ? (
+                    <a
+                      href={originalHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="bedroom-watch-original"
+                      data-playback-control
+                    >
+                      Watch original
+                    </a>
+                  ) : (
+                    <span className="bedroom-timecode-rail__clock">Unavailable</span>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={`bedroom-timecode-rail ${embed.kind === "youtube-playlist" ? "bedroom-timecode-rail--playlist" : ""}`}
+                  aria-label="Playback timeline"
+                  data-playback-control
+                >
+                  {embed.kind === "youtube-playlist" ? (
+                    <button
+                      type="button"
+                      className="bedroom-timecode-rail__skip"
+                      aria-label="Previous playlist item"
+                      data-playback-control
+                      onClick={() => playbackRef.current?.previous?.()}
+                    >
+                      Prev
+                    </button>
+                  ) : null}
+                  <span className="bedroom-timecode-rail__clock">
+                    {formatClock(playbackTime)}
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={Math.max(0.1, playbackDuration || 0)}
+                    step={0.01}
+                    value={Math.min(playbackTime, Math.max(0.1, playbackDuration || 0))}
+                    data-playback-control
+                    onPointerDown={() => setIsScrubbing(true)}
+                    onPointerUp={() => setIsScrubbing(false)}
+                    onBlur={() => setIsScrubbing(false)}
+                    onChange={(e) => handleScrub(e.target.value)}
+                    className="bedroom-timecode-rail__range"
+                    aria-label="Seek timeline"
+                  />
+                  <span className="bedroom-timecode-rail__clock bedroom-timecode-rail__clock--end">
+                    {formatClock(playbackDuration)}
+                  </span>
+                  {embed.kind === "youtube-playlist" ? (
+                    <button
+                      type="button"
+                      className="bedroom-timecode-rail__skip"
+                      aria-label="Next playlist item"
+                      data-playback-control
+                      onClick={() => playbackRef.current?.next?.()}
+                    >
+                      Next
+                    </button>
+                  ) : null}
+                </div>
+              )}
               <div className="bedroom-poster-title-strip">
                 <div className="bedroom-poster-title-strip__stack">
                   <p className="bedroom-poster-title-strip__text line-clamp-2">

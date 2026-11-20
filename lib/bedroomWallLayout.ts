@@ -556,19 +556,36 @@ function packedFilterSlot(rank: number, count: number): ManualBoardSlot {
 const WALL_LAYOUT_SLUG_SWAPS: [string, string][] = [
   ["sabrina-carpenter-tears", "charlie-puth-thats-not-how-this-works"],
   ["burger-king-whopper-by-you", "doja-cat-jealous-type"],
+  /** After Charlie’s current seat is resolved — Jesse inherits that slot, Charlie takes Jesse’s. */
+  ["jesse-jo-stark-who-knew", "charlie-puth-thats-not-how-this-works"],
 ];
+
+/** Jesse/Charlie seat swap also applies on the MUSIC VIDEO packed board. */
+const WALL_FILTER_LAYOUT_SLUG_SWAPS: [string, string][] = [
+  ["jesse-jo-stark-who-knew", "charlie-puth-thats-not-how-this-works"],
+];
+
+function swapLayoutsBySlug(
+  projects: Project[],
+  layouts: PosterWallLayout[],
+  slugA: string,
+  slugB: string,
+): void {
+  const ia = projects.findIndex((p) => p.slug === slugA);
+  const ib = projects.findIndex((p) => p.slug === slugB);
+  if (ia < 0 || ib < 0) return;
+  const tmp = layouts[ia]!;
+  layouts[ia] = layouts[ib]!;
+  layouts[ib] = tmp;
+}
 
 function applyWallLayoutSlugSwaps(
   projects: Project[],
   layouts: PosterWallLayout[],
+  pairs: readonly [string, string][] = WALL_LAYOUT_SLUG_SWAPS,
 ): void {
-  for (const [slugA, slugB] of WALL_LAYOUT_SLUG_SWAPS) {
-    const ia = projects.findIndex((p) => p.slug === slugA);
-    const ib = projects.findIndex((p) => p.slug === slugB);
-    if (ia < 0 || ib < 0) continue;
-    const tmp = layouts[ia]!;
-    layouts[ia] = layouts[ib]!;
-    layouts[ib] = tmp;
+  for (const [slugA, slugB] of pairs) {
+    swapLayoutsBySlug(projects, layouts, slugA, slugB);
   }
 }
 
@@ -645,5 +662,6 @@ export function computeFilteredWallLayouts(
       rank + 97,
     );
   });
+  applyWallLayoutSlugSwaps(projects, out, WALL_FILTER_LAYOUT_SLUG_SWAPS);
   return out;
 }

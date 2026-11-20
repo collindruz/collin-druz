@@ -1217,7 +1217,7 @@ export function getVideoEmbed(videoUrl: string): VideoEmbed {
   if (vm) {
     return {
       kind: "vimeo",
-      src: `https://player.vimeo.com/video/${vm[1]}?badge=0`,
+      src: `https://player.vimeo.com/video/${vm[1]}?badge=0&controls=0&autoplay=1`,
     };
   }
   if (/\.(mp4|webm|ogg)(\?|$)/i.test(videoUrl)) {
