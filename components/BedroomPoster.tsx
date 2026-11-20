@@ -900,7 +900,12 @@ function BedroomPosterInner({
       className="bedroom-poster-thumb-only bedroom-poster-print flex w-full flex-col overflow-hidden border-0 bg-transparent p-0 leading-none"
       style={edgeStyle}
     >
-      <div className="bedroom-closed-thumb-crop">
+      <div
+        className="bedroom-closed-thumb-crop"
+        {...(project.slug === "call-of-duty-modern-warfare-4"
+          ? { "data-full-cover": "" }
+          : {})}
+      >
         {showClosedStill ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element -- native lazy load; avoid N× /_next/image optimizer calls on the wall */}

@@ -377,6 +377,11 @@
   transform-origin: center center;
 }
 
+.bedroom-closed-thumb-crop[data-full-cover] .bedroom-closed-thumb-crop__img {
+  object-position: center 30%;
+  transform: scale(1.04);
+}
+
 /** Layout-only slot: no paint, no shadow (wall shows through). */
 .bedroom-poster-flow-spacer {
   box-shadow: none !important;

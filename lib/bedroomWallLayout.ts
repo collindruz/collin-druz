@@ -454,8 +454,23 @@ export function getWallDebugOverlayData(
   return { territory, grid: { verticalsPct, horizontalsPct }, posters };
 }
 
+/**
+ * Overflow pins that need a visible, art-directed seat without stealing ranks 0–41.
+ * Existing overflow ranks stay mapped to the same generated slots.
+ */
+const WALL_OVERFLOW_CUSTOM_SLOTS: Partial<Record<string, ManualBoardSlot>> = {
+  "call-of-duty-modern-warfare-4": {
+    leftPct: 16.4,
+    topPct: 31.2,
+    size: "xl",
+    rotateDeg: -0.4,
+    zIndex: 72,
+  },
+};
+
 /** New additions — pinned to unused manual slots so the existing board does not reshuffle. */
 const WALL_OVERFLOW_SLOT_SLUGS = [
+  "call-of-duty-modern-warfare-4",
   "jean-dawson-sick-of-it",
   "jean-dawson-pirate-radio",
   "jean-dawson-three-heads",
@@ -478,7 +493,7 @@ const WALL_OVERFLOW_SLOT_SLUGS = [
 ] as const;
 
 const WALL_OVERFLOW_SLOT_RANKS = [
-  39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+  58, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
 ] as const;
 
 function assignLayoutFromManualSlot(
@@ -578,7 +593,10 @@ export function computeWallLayouts(projects: Project[]): PosterWallLayout[] {
     const rank = WALL_OVERFLOW_SLOT_RANKS[i]!;
     const m = metas.find((x) => x.p.slug === slug);
     if (!m) continue;
-    out[m.idx] = assignWallLayoutFromSlot(m, rank, ranked.length + i);
+    const custom = WALL_OVERFLOW_CUSTOM_SLOTS[slug];
+    out[m.idx] = custom
+      ? assignLayoutFromManualSlot(m, custom, ranked.length + i)
+      : assignWallLayoutFromSlot(m, rank, ranked.length + i);
   }
 
   for (let i = 0; i < n; i++) {
